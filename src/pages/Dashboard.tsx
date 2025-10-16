@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Briefcase, Calendar, TrendingUp } from "lucide-react";
+import { Users, Briefcase, Calendar, TrendingUp, ArrowUp, ArrowDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const stats = [
   {
@@ -7,75 +8,114 @@ const stats = [
     value: "1,234",
     icon: Users,
     trend: "+12.5%",
+    trendUp: true,
+    color: "from-blue-500 to-blue-600",
   },
   {
     title: "ตำแหน่งเปิดรับ",
     value: "45",
     icon: Briefcase,
     trend: "+5.2%",
+    trendUp: true,
+    color: "from-purple-500 to-purple-600",
   },
   {
     title: "สัมภาษณ์วันนี้",
     value: "8",
     icon: Calendar,
     trend: "+2",
+    trendUp: true,
+    color: "from-orange-500 to-orange-600",
   },
   {
     title: "อัตราจ้างงาน",
     value: "85%",
     icon: TrendingUp,
     trend: "+3.1%",
+    trendUp: true,
+    color: "from-green-500 to-green-600",
   },
+];
+
+const recentCandidates = [
+  { name: "สมชาย ใจดี", position: "Senior Developer", score: 89, time: "5 นาทีที่แล้ว" },
+  { name: "สมหญิง รักดี", position: "UX Designer", score: 92, time: "15 นาทีที่แล้ว" },
+  { name: "ประเสริฐ วงศ์ดี", position: "Data Scientist", score: 87, time: "1 ชั่วโมงที่แล้ว" },
+  { name: "วิชัย สุขใจ", position: "Product Manager", score: 84, time: "2 ชั่วโมงที่แล้ว" },
+  { name: "นภา ใจงาม", position: "Frontend Developer", score: 91, time: "3 ชั่วโมงที่แล้ว" },
+];
+
+const todayInterviews = [
+  { name: "อรุณ สว่างไสว", position: "Senior Developer", time: "10:00 - 11:00", status: "completed" },
+  { name: "ธนพล มั่งคั่ง", position: "UX Designer", time: "14:00 - 15:00", status: "upcoming" },
+  { name: "ศิริพร แสงจันทร์", position: "Data Scientist", time: "15:30 - 16:30", status: "upcoming" },
 ];
 
 export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
+        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+          Dashboard
+        </h1>
         <p className="text-muted-foreground">
           ภาพรวมระบบจัดการผู้สมัครและการสัมภาษณ์
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
+        {stats.map((stat, index) => (
+          <Card key={stat.title} className="relative overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50">
+            <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${stat.color} opacity-10 rounded-full -mr-16 -mt-16`} />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
               </CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
+              <div className={`h-10 w-10 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-md`}>
+                <stat.icon className="h-5 w-5 text-white" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">
-                <span className="text-success">{stat.trend}</span> จากเดือนที่แล้ว
-              </p>
+              <div className="text-3xl font-bold mb-1">{stat.value}</div>
+              <div className="flex items-center text-xs">
+                {stat.trendUp ? (
+                  <ArrowUp className="h-3 w-3 text-green-500 mr-1" />
+                ) : (
+                  <ArrowDown className="h-3 w-3 text-red-500 mr-1" />
+                )}
+                <span className={stat.trendUp ? "text-green-500" : "text-red-500"}>
+                  {stat.trend}
+                </span>
+                <span className="text-muted-foreground ml-1">จากเดือนที่แล้ว</span>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
-            <CardTitle>ผู้สมัครล่าสุด</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+              ผู้สมัครล่าสุด
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center justify-between border-b pb-3 last:border-0">
-                  <div>
-                    <p className="font-medium">ผู้สมัคร #{i}</p>
-                    <p className="text-sm text-muted-foreground">Senior Developer</p>
+            <div className="space-y-3">
+              {recentCandidates.map((candidate, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold shadow-sm group-hover:shadow-md transition-shadow">
+                      {candidate.score}
+                    </div>
+                    <div>
+                      <p className="font-medium group-hover:text-primary transition-colors">{candidate.name}</p>
+                      <p className="text-sm text-muted-foreground">{candidate.position}</p>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <div className="h-10 w-10 rounded-full bg-gradient-primary flex items-center justify-center text-white font-bold">
-                        {85 + i}
-                      </div>
-                    </div>
+                    <p className="text-xs text-muted-foreground">{candidate.time}</p>
                   </div>
                 </div>
               ))}
@@ -83,21 +123,28 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
-            <CardTitle>การสัมภาษณ์วันนี้</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              การสัมภาษณ์วันนี้
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between border-b pb-3 last:border-0">
+            <div className="space-y-3">
+              {todayInterviews.map((interview, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors">
                   <div>
-                    <p className="font-medium">สัมภาษณ์ #{i}</p>
-                    <p className="text-sm text-muted-foreground">14:00 - 15:00 น.</p>
+                    <p className="font-medium">{interview.name}</p>
+                    <p className="text-sm text-muted-foreground">{interview.position}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{interview.time}</p>
                   </div>
-                  <div className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                    กำลังจะถึง
-                  </div>
+                  <Badge 
+                    variant={interview.status === "completed" ? "secondary" : "default"}
+                    className={interview.status === "upcoming" ? "bg-primary/10 text-primary border-primary/20" : ""}
+                  >
+                    {interview.status === "completed" ? "เสร็จสิ้น" : "กำลังจะถึง"}
+                  </Badge>
                 </div>
               ))}
             </div>
