@@ -1,22 +1,11 @@
-import { Navigation } from "@/components/Navigation";
-import { Hero } from "@/components/Hero";
-import { Features } from "@/components/Features";
-import { CandidatePreview } from "@/components/CandidatePreview";
-import { HowItWorks } from "@/components/HowItWorks";
-import { CTA } from "@/components/CTA";
-import { Footer } from "@/components/Footer";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import Dashboard from "./Dashboard";
 
 const Index = () => {
   return (
-    <div className="min-h-screen">
-      <Navigation />
-      <Hero />
-      <Features />
-      <CandidatePreview />
-      <HowItWorks />
-      <CTA />
-      <Footer />
-    </div>
+    <DashboardLayout>
+      <Dashboard />
+    </DashboardLayout>
   );
 };
 
