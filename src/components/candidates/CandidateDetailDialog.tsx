@@ -1,4 +1,15 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -44,7 +55,18 @@ const statusLabels = {
 };
 
 export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, onDelete }: CandidateDetailDialogProps) {
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  
   if (!candidate) return null;
+
+  const handleDeleteClick = () => {
+    setShowDeleteAlert(true);
+  };
+
+  const handleConfirmDelete = () => {
+    onDelete();
+    setShowDeleteAlert(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -79,7 +101,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                 <Edit className="h-4 w-4 mr-2" />
                 แก้ไข
               </Button>
-              <Button variant="destructive" size="sm" onClick={onDelete}>
+              <Button variant="destructive" size="sm" onClick={handleDeleteClick}>
                 <Trash2 className="h-4 w-4 mr-2" />
                 ลบ
               </Button>
@@ -202,6 +224,24 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการลบผู้สมัคร</AlertDialogTitle>
+            <AlertDialogDescription>
+              คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลของ <span className="font-semibold">{candidate.name}</span>? 
+              การดำเนินการนี้ไม่สามารถย้อนกลับได้
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              ลบ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
