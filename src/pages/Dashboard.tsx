@@ -51,12 +51,20 @@ const todayInterviews = [
   { name: "ศิริพร แสงจันทร์", position: "Data Scientist", time: "15:30 - 16:30", status: "upcoming" },
 ];
 
+const openPositions = [
+  { title: "Senior Developer", positions: 3, status: "Interview", applicants: 45 },
+  { title: "UX Designer", positions: 2, status: "Screening", applicants: 32 },
+  { title: "Data Scientist", positions: 1, status: "Offer", applicants: 18 },
+  { title: "Product Manager", positions: 2, status: "Interview", applicants: 28 },
+  { title: "Frontend Developer", positions: 4, status: "Screening", applicants: 52 },
+];
+
 export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          Dashboard
+          Today hiring Overview
         </h1>
         <p className="text-muted-foreground">
           ภาพรวมระบบจัดการผู้สมัครและการสัมภาษณ์
@@ -93,7 +101,40 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5 text-primary" />
+              ตำแหน่งที่เปิดรับ
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {openPositions.map((position, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors">
+                  <div className="flex-1">
+                    <p className="font-medium">{position.title}</p>
+                    <p className="text-sm text-muted-foreground">{position.positions} อัตรา • {position.applicants} ผู้สมัคร</p>
+                  </div>
+                  <Badge 
+                    variant="outline"
+                    className={
+                      position.status === "Screening" 
+                        ? "bg-blue-500/10 text-blue-600 border-blue-500/20" 
+                        : position.status === "Interview"
+                        ? "bg-orange-500/10 text-orange-600 border-orange-500/20"
+                        : "bg-green-500/10 text-green-600 border-green-500/20"
+                    }
+                  >
+                    {position.status}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
