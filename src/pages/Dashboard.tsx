@@ -1,6 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Briefcase, Calendar, TrendingUp, ArrowUp, ArrowDown } from "lucide-react";
+import { Users, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useState } from "react";
 
 const stats = [
   {
@@ -10,30 +17,6 @@ const stats = [
     trend: "+12.5%",
     trendUp: true,
     color: "from-blue-500 to-blue-600",
-  },
-  {
-    title: "ตำแหน่งเปิดรับ",
-    value: "45",
-    icon: Briefcase,
-    trend: "+5.2%",
-    trendUp: true,
-    color: "from-purple-500 to-purple-600",
-  },
-  {
-    title: "สัมภาษณ์วันนี้",
-    value: "8",
-    icon: Calendar,
-    trend: "+2",
-    trendUp: true,
-    color: "from-orange-500 to-orange-600",
-  },
-  {
-    title: "อัตราจ้างงาน",
-    value: "85%",
-    icon: TrendingUp,
-    trend: "+3.1%",
-    trendUp: true,
-    color: "from-green-500 to-green-600",
   },
 ];
 
@@ -51,15 +34,22 @@ const todayInterviews = [
   { name: "ศิริพร แสงจันทร์", position: "Data Scientist", time: "15:30 - 16:30", status: "upcoming" },
 ];
 
-const openPositions = [
-  { title: "Senior Developer", positions: 3, status: "Interview", applicants: 45 },
-  { title: "UX Designer", positions: 2, status: "Screening", applicants: 32 },
-  { title: "Data Scientist", positions: 1, status: "Offer", applicants: 18 },
-  { title: "Product Manager", positions: 2, status: "Interview", applicants: 28 },
-  { title: "Frontend Developer", positions: 4, status: "Screening", applicants: 52 },
+const initialOpenPositions = [
+  { id: 1, title: "Senior Developer", positions: 3, status: "Interview", applicants: 45 },
+  { id: 2, title: "UX Designer", positions: 2, status: "Screening", applicants: 32 },
+  { id: 3, title: "Data Scientist", positions: 1, status: "Offer", applicants: 18 },
+  { id: 4, title: "Product Manager", positions: 2, status: "Interview", applicants: 28 },
+  { id: 5, title: "Frontend Developer", positions: 4, status: "Screening", applicants: 52 },
 ];
 
 export default function Dashboard() {
+  const [openPositions, setOpenPositions] = useState(initialOpenPositions);
+
+  const handleStatusChange = (id: number, newStatus: string) => {
+    setOpenPositions(openPositions.map(position => 
+      position.id === id ? { ...position, status: newStatus } : position
+    ));
+  };
   return (
     <div className="space-y-6">
       <div>
@@ -71,8 +61,8 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
+      <div className="grid gap-4">
+        {stats.map((stat) => (
           <Card key={stat.title} className="relative overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50">
             <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${stat.color} opacity-10 rounded-full -mr-16 -mt-16`} />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -86,12 +76,7 @@ export default function Dashboard() {
             <CardContent>
               <div className="text-3xl font-bold mb-1">{stat.value}</div>
               <div className="flex items-center text-xs">
-                {stat.trendUp ? (
-                  <ArrowUp className="h-3 w-3 text-green-500 mr-1" />
-                ) : (
-                  <ArrowDown className="h-3 w-3 text-red-500 mr-1" />
-                )}
-                <span className={stat.trendUp ? "text-green-500" : "text-red-500"}>
+                <span className="text-green-500">
                   {stat.trend}
                 </span>
                 <span className="text-muted-foreground ml-1">จากเดือนที่แล้ว</span>
@@ -105,30 +90,46 @@ export default function Dashboard() {
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5 text-primary" />
               ตำแหน่งที่เปิดรับ
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {openPositions.map((position, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors">
+              {openPositions.map((position) => (
+                <div key={position.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors">
                   <div className="flex-1">
                     <p className="font-medium">{position.title}</p>
                     <p className="text-sm text-muted-foreground">{position.positions} อัตรา • {position.applicants} ผู้สมัคร</p>
                   </div>
-                  <Badge 
-                    variant="outline"
-                    className={
-                      position.status === "Screening" 
-                        ? "bg-blue-500/10 text-blue-600 border-blue-500/20" 
-                        : position.status === "Interview"
-                        ? "bg-orange-500/10 text-orange-600 border-orange-500/20"
-                        : "bg-green-500/10 text-green-600 border-green-500/20"
-                    }
-                  >
-                    {position.status}
-                  </Badge>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="outline-none">
+                        <Badge 
+                          variant="outline"
+                          className={
+                            position.status === "Screening" 
+                              ? "bg-blue-500/10 text-blue-600 border-blue-500/20 cursor-pointer hover:bg-blue-500/20" 
+                              : position.status === "Interview"
+                              ? "bg-orange-500/10 text-orange-600 border-orange-500/20 cursor-pointer hover:bg-orange-500/20"
+                              : "bg-green-500/10 text-green-600 border-green-500/20 cursor-pointer hover:bg-green-500/20"
+                          }
+                        >
+                          {position.status}
+                        </Badge>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleStatusChange(position.id, "Screening")}>
+                        Screening
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleStatusChange(position.id, "Interview")}>
+                        Interview
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleStatusChange(position.id, "Offer")}>
+                        Offer
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ))}
             </div>
