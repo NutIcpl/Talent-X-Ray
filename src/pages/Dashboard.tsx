@@ -1,175 +1,116 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useState } from "react";
-import { CompanyProfile } from "@/components/dashboard/CompanyProfile";
-import { ContactMap } from "@/components/dashboard/ContactMap";
+import { Card, CardContent } from "@/components/ui/card";
+import { Award, CheckCircle2 } from "lucide-react";
+import companyFarmer from "@/assets/company-farmer.jpg";
+import companyRice from "@/assets/company-rice.jpg";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import Autoplay from "embla-carousel-autoplay";
+import { useRef } from "react";
 
-const recentCandidates = [
-  { name: "สมชาย ใจดี", position: "Senior Developer", score: 89, time: "5 นาทีที่แล้ว" },
-  { name: "สมหญิง รักดี", position: "UX Designer", score: 92, time: "15 นาทีที่แล้ว" },
-  { name: "ประเสริฐ วงศ์ดี", position: "Data Scientist", score: 87, time: "1 ชั่วโมงที่แล้ว" },
-  { name: "วิชัย สุขใจ", position: "Product Manager", score: 84, time: "2 ชั่วโมงที่แล้ว" },
-  { name: "นภา ใจงาม", position: "Frontend Developer", score: 91, time: "3 ชั่วโมงที่แล้ว" },
-];
+export function CompanyProfile() {
+  const plugin = useRef(Autoplay({ delay: 4000, stopOnInteraction: true }));
 
-const todayInterviews = [
-  { name: "อรุณ สว่างไสว", position: "Senior Developer", time: "10:00 - 11:00", status: "completed" },
-  { name: "ธนพล มั่งคั่ง", position: "UX Designer", time: "14:00 - 15:00", status: "upcoming" },
-  { name: "ศิริพร แสงจันทร์", position: "Data Scientist", time: "15:30 - 16:30", status: "upcoming" },
-];
+  const certifications = [
+    "ISO 9001:2015 - ระบบบริหารงานคุณภาพ",
+    "ISO 14001:2015 - ระบบจัดการสิ่งแวดล้อม",
+    "ISO/IEC 17025:2017 - มาตรฐานห้องปฏิบัติการ",
+    "GMP - สำนักงานคณะกรรมการอาหารและยา",
+  ];
 
-const initialOpenPositions = [
-  { id: 1, title: "Senior Developer", positions: 3, status: "Interview", applicants: 45 },
-  { id: 2, title: "UX Designer", positions: 2, status: "Screening", applicants: 32 },
-  { id: 3, title: "Data Scientist", positions: 1, status: "Offer", applicants: 18 },
-  { id: 4, title: "Product Manager", positions: 2, status: "Interview", applicants: 28 },
-  { id: 5, title: "Frontend Developer", positions: 4, status: "Screening", applicants: 52 },
-];
+  const carouselImages = [
+    { src: companyFarmer, alt: "ยกระดับคุณภาพชีวิตเกษตรกรไทย", caption: "ยกระดับคุณภาพชีวิตเกษตรกรไทย" },
+    { src: companyRice, alt: "ใส่ใจทุกรายละเอียดในการดูแลพืช", caption: "ใส่ใจทุกรายละเอียดในการดูแลพืช" },
+  ];
 
-export default function Dashboard() {
-  const [openPositions, setOpenPositions] = useState(initialOpenPositions);
-
-  const handleStatusChange = (id: number, newStatus: string) => {
-    setOpenPositions(
-      openPositions.map((position) => (position.id === id ? { ...position, status: newStatus } : position)),
-    );
-  };
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"></h1>
-        <p className="text-muted-foreground"></p>
-      </div>
+    <Card className="relative overflow-hidden border-border/50 bg-gradient-to-br from-card via-background to-primary/5 hover:shadow-xl transition-all duration-500 animate-fade-in">
+      {/* Decorative Background Elements */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-primary/10 via-primary-glow/5 to-transparent rounded-full blur-3xl -mr-48 -mt-48" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-success/5 via-primary/5 to-transparent rounded-full blur-3xl -ml-48 -mb-48" />
 
-      {/* Company Profile */}
-      <CompanyProfile />
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">ตำแหน่งที่เปิดรับ</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {openPositions.map((position) => (
-                <div
-                  key={position.id}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium">{position.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {position.positions} อัตรา • {position.applicants} ผู้สมัคร
-                    </p>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="outline-none">
-                        <Badge
-                          variant="outline"
-                          className={
-                            position.status === "Screening"
-                              ? "bg-blue-500/10 text-blue-600 border-blue-500/20 cursor-pointer hover:bg-blue-500/20"
-                              : position.status === "Interview"
-                                ? "bg-orange-500/10 text-orange-600 border-orange-500/20 cursor-pointer hover:bg-orange-500/20"
-                                : "bg-green-500/10 text-green-600 border-green-500/20 cursor-pointer hover:bg-green-500/20"
-                          }
-                        >
-                          {position.status}
-                        </Badge>
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleStatusChange(position.id, "Screening")}>
-                        Screening
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleStatusChange(position.id, "Interview")}>
-                        Interview
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleStatusChange(position.id, "Offer")}>
-                        Offer
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              ผู้สมัครล่าสุด
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {recentCandidates.map((candidate, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold shadow-sm group-hover:shadow-md transition-shadow">
-                      {candidate.score}
-                    </div>
-                    <div>
-                      <p className="font-medium group-hover:text-primary transition-colors">{candidate.name}</p>
-                      <p className="text-sm text-muted-foreground">{candidate.position}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">{candidate.time}</p>
+      <CardContent className="p-0 relative">
+        {/* Hero Images Carousel */}
+        <Carousel
+          plugins={[plugin.current]}
+          className="w-full"
+          onMouseEnter={() => plugin.current.stop()}
+          onMouseLeave={() => plugin.current.play()}
+        >
+          <CarouselContent>
+            {carouselImages.map((image, index) => (
+              <CarouselItem key={index}>
+                <div className="relative h-96 md:h-[500px] overflow-hidden">
+                  <img src={image.src} alt={image.alt} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent flex items-end p-8">
+                    <h3 className="text-2xl md:text-4xl font-bold text-white drop-shadow-lg">"{image.caption}"</h3>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious className="left-4" />
+          <CarouselNext className="right-4" />
+        </Carousel>
 
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              การสัมภาษณ์วันนี้
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {todayInterviews.map((interview, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div>
-                    <p className="font-medium">{interview.name}</p>
-                    <p className="text-sm text-muted-foreground">{interview.position}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{interview.time}</p>
-                  </div>
-                  <Badge
-                    variant={interview.status === "completed" ? "secondary" : "default"}
-                    className={interview.status === "upcoming" ? "bg-primary/10 text-primary border-primary/20" : ""}
+        {/* Company Information Section */}
+        <div className="p-8 md:p-10">
+          {/* Company Header */}
+          <div className="mb-8 text-center">
+            <div className="inline-flex items-center gap-3 mb-4">
+              <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-success to-success/80 flex items-center justify-center shadow-lg shadow-success/20">
+                <Award className="h-8 w-8 text-white" />
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-lg text-muted-foreground mb-2">
+              <div className="h-1 w-1 rounded-full bg-success animate-pulse" />
+              <span>ผู้นำธุรกิจเคมีเกษตรมากว่า 50 ปี</span>
+              <div className="h-1 w-1 rounded-full bg-success animate-pulse" />
+            </div>
+          </div>
+
+          {/* Company Description */}
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-gradient-to-br from-accent/50 to-accent/30 p-6 md:p-8 rounded-2xl border border-border/50 mb-8 hover:shadow-md transition-all duration-300">
+              <p className="text-base md:text-lg leading-relaxed text-foreground/90">
+                เป็นบริษัทชั้นนำในด้านธุรกิจเคมีเกษตร ดำเนินธุรกิจนาน{" "}
+                <span className="font-bold text-success">50 ปี</span> ดำเนินการผลิต นำเข้า
+                และจัดจำหน่ายสารเคมีป้องกันศัตรูพืช ปุ๋ยเคมี และฮอร์โมนสำหรับพืช ฯลฯ
+              </p>
+              <p className="text-base md:text-lg leading-relaxed text-foreground/90 mt-4">
+                ทางบริษัทให้ความสำคัญอย่างยิ่งต่อเนื่องเสมอมาในการควบคุมคุณภาพของผลิตภัณฑ์ และใส่ใจในการรักษาสิ่งแวดล้อม
+                พร้อมห้องปฏิบัติการที่ทันสมัยเพื่อตรวจสอบคุณภาพอย่างเข้มงวด
+              </p>
+            </div>
+
+            {/* Certifications Grid */}
+            <div className="bg-gradient-to-br from-primary/5 to-success/5 p-6 md:p-8 rounded-2xl border border-border/50">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center">
+                  <Award className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-xl font-bold">มาตรฐานและการรับรอง</h3>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                {certifications.map((cert, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-3 p-4 rounded-xl bg-card/80 hover:bg-card transition-all duration-300 hover:shadow-md border border-border/30 hover-scale group"
                   >
-                    {interview.status === "completed" ? "เสร็จสิ้น" : "กำลังจะถึง"}
-                  </Badge>
-                </div>
-              ))}
+                    <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm leading-relaxed">{cert}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 pt-6 border-t border-border/50">
+                <p className="text-sm text-muted-foreground text-center">
+                  รับรองโดย <span className="font-semibold text-primary">Bureau Veritas (BV)</span>,
+                  <span className="font-semibold text-primary"> สำนักบริหารและรับรองห้องปฏิบัติการ</span> และ
+                  <span className="font-semibold text-primary"> กระทรวงสาธารณสุข</span>
+                </p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Contact & Map Section */}
-      <ContactMap />
-    </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
