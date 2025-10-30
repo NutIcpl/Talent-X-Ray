@@ -2,7 +2,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Award, CheckCircle2 } from "lucide-react";
 import companyFarmer from "@/assets/company-farmer.jpg";
 import companyRice from "@/assets/company-rice.jpg";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import Autoplay from "embla-carousel-autoplay";
 import { useRef } from "react";
 
@@ -14,6 +20,19 @@ export function CompanyProfile() {
     "ISO 14001:2015 - ระบบจัดการสิ่งแวดล้อม",
     "ISO/IEC 17025:2017 - มาตรฐานห้องปฏิบัติการ",
     "GMP - สำนักงานคณะกรรมการอาหารและยา",
+  ];
+
+  const carouselImages = [
+    {
+      src: companyFarmer,
+      alt: "ยกระดับคุณภาพชีวิตเกษตรกรไทย",
+      caption: "ยกระดับคุณภาพชีวิตเกษตรกรไทย",
+    },
+    {
+      src: companyRice,
+      alt: "ใส่ใจทุกรายละเอียดในการดูแลพืช",
+      caption: "ใส่ใจทุกรายละเอียดในการดูแลพืช",
+    },
   ];
 
   return (
@@ -34,16 +53,16 @@ export function CompanyProfile() {
             {carouselImages.map((image, index) => (
               <CarouselItem key={index}>
                 <div className="relative h-96 md:h-[500px] overflow-hidden">
-                  <img src={image.src} alt={image.alt} className="w-full h-full object-cover" />
-                  {/* แก้ไข overlay ให้ตัวอักษรอ่านชัด: ใช้พื้นหลังโปร่ง/เบลอเล็กน้อย แทน drop-shadow */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent flex items-end p-6 md:p-8">
-                    <div className="max-w-[90%]">
-                      <span className="inline-block rounded-xl bg-black/40 backdrop-blur-sm px-4 py-2">
-                        <h3 className="text-xl md:text-4xl font-bold leading-tight tracking-tight text-white">
-                          “{image.caption}”
-                        </h3>
-                      </span>
-                    </div>
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    className="w-full h-full object-cover"
+                  />
+                  {/* ✅ เอากล่องดำด้านล่างออก: ไม่มี span พื้นหลัง และไม่ผูกตำแหน่งไว้ที่ด้านล่าง */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/10 to-transparent flex items-center justify-center p-6 md:p-8">
+                    <h3 className="text-xl md:text-4xl font-bold leading-tight tracking-tight text-white text-center">
+                      “{image.caption}”
+                    </h3>
                   </div>
                 </div>
               </CarouselItem>
@@ -78,41 +97,5 @@ export function CompanyProfile() {
                 และจัดจำหน่ายสารเคมีป้องกันศัตรูพืช ปุ๋ยเคมี และฮอร์โมนสำหรับพืช ฯลฯ
               </p>
               <p className="text-base md:text-lg leading-relaxed text-foreground/90 mt-4">
-                ทางบริษัทให้ความสำคัญอย่างยิ่งต่อเนื่องเสมอมาในการควบคุมคุณภาพของผลิตภัณฑ์ และใส่ใจในการรักษาสิ่งแวดล้อม
-                พร้อมห้องปฏิบัติการที่ทันสมัยเพื่อตรวจสอบคุณภาพอย่างเข้มงวด
-              </p>
-            </div>
-
-            {/* Certifications Grid */}
-            <div className="bg-gradient-to-br from-primary/5 to-success/5 p-6 md:p-8 rounded-2xl border border-border/50">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center">
-                  <Award className="h-5 w-5 text-white" />
-                </div>
-                <h3 className="text-xl font-bold">มาตรฐานและการรับรอง</h3>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                {certifications.map((cert, index) => (
-                  <div
-                    key={index}
-                    className="flex items-start gap-3 p-4 rounded-xl bg-card/80 hover:bg-card transition-all duration-300 hover:shadow-md border border-border/30 group"
-                  >
-                    <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-                    <span className="text-sm leading-relaxed">{cert}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 pt-6 border-t border-border/50">
-                <p className="text-sm text-muted-foreground text-center">
-                  รับรองโดย <span className="font-semibold text-primary">Bureau Veritas (BV)</span>,
-                  <span className="font-semibold text-primary"> สำนักบริหารและรับรองห้องปฏิบัติการ</span> และ
-                  <span className="font-semibold text-primary"> กระทรวงสาธารณสุข</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+                ทางบริษัทให้ความสำคัญอย่างยิ่งต่อเนื่องเสมอมาในการควบคุมคุณภาพของผลิตภัณฑ์
+                และใส่ใจในการรักษาสิ่งแวดล้อม พร้อมห้องปฏิบัต
