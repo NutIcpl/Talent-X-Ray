@@ -24,10 +24,14 @@ const initialCandidates = [
     education: "ปริญญาตรี วิทยาการคอมพิวเตอร์",
     summary: "มีประสบการณ์ในการพัฒนา Web Application ด้วย React และ Node.js มากกว่า 5 ปี เคยทำงานในโปรเจกต์ขนาดใหญ่หลายโปรเจกต์",
     previousCompany: "Tech Solutions Co.",
+    testScores: {
+      hrTest: 85,
+      departmentTest: 92,
+    },
     interviews: {
-      hr: { date: "15/03/2024", passed: true, feedback: "Good communication skills" },
-      manager: { date: "18/03/2024", passed: true, feedback: "Strong technical knowledge" },
-      isTeam: { date: "20/03/2024", passed: true, feedback: "Excellent problem solving" },
+      hr: { date: "15/03/2024", passed: true, feedback: "มีทักษะการสื่อสารที่ดี" },
+      manager: { date: "18/03/2024", passed: true, feedback: "มีความรู้ทางเทคนิคสูง" },
+      isTeam: { date: "20/03/2024", passed: true, feedback: "แก้ปัญหาได้ดีมาก" },
     },
   },
   {
@@ -45,9 +49,13 @@ const initialCandidates = [
     education: "ปริญญาตรี การออกแบบนิเทศศิลป์",
     summary: "UX Designer ที่มีความชำนาญในการออกแบบ User Interface และ User Experience สำหรับแอปพลิเคชันและเว็บไซต์",
     previousCompany: "Design Studio Ltd.",
+    testScores: {
+      hrTest: 88,
+      departmentTest: 95,
+    },
     interviews: {
-      hr: { date: "10/03/2024", passed: true, feedback: "Creative and professional" },
-      manager: { date: "12/03/2024", passed: true, feedback: "Great portfolio" },
+      hr: { date: "10/03/2024", passed: true, feedback: "สร้างสรรค์และมืออาชีพ" },
+      manager: { date: "12/03/2024", passed: true, feedback: "พอร์ตโฟลิโอยอดเยี่ยม" },
     },
   },
   {
@@ -162,6 +170,17 @@ export default function Candidates() {
       title: "ลบผู้สมัครแล้ว",
       description: `ลบข้อมูล ${candidate?.name} เรียบร้อยแล้ว`,
       variant: "destructive",
+    });
+  };
+
+  const handleInterviewUpdate = (candidateId: number, interviews: any) => {
+    setCandidates(candidates.map(c => 
+      c.id === candidateId ? { ...c, interviews } : c
+    ));
+    setSelectedCandidate(prev => prev ? { ...prev, interviews } : null);
+    toast({
+      title: "บันทึกข้อมูลแล้ว",
+      description: "แก้ไขข้อมูลการสัมภาษณ์เรียบร้อยแล้ว",
     });
   };
 
@@ -287,6 +306,7 @@ export default function Candidates() {
         onOpenChange={setIsDetailOpen}
         onEdit={() => handleEdit(selectedCandidate!)}
         onDelete={() => selectedCandidate && handleDelete(selectedCandidate.id)}
+        onInterviewUpdate={handleInterviewUpdate}
       />
 
       <CandidateFormDialog

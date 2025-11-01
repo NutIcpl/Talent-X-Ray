@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Mail, Phone, MapPin, Calendar, Briefcase, GraduationCap, Star, FileText, Edit, Trash2 } from "lucide-react";
+import { CandidateInterviewDialog } from "./CandidateInterviewDialog";
 
 interface CandidateDetailDialogProps {
   candidate: {
@@ -31,6 +32,10 @@ interface CandidateDetailDialogProps {
     education: string;
     summary: string;
     previousCompany: string;
+    testScores?: {
+      hrTest: number;
+      departmentTest: number;
+    };
     interviews?: {
       hr?: { date: string; passed: boolean; feedback: string };
       manager?: { date: string; passed: boolean; feedback: string };
@@ -41,6 +46,7 @@ interface CandidateDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onInterviewUpdate: (candidateId: number, interviews: any) => void;
 }
 
 const statusColors = {
@@ -59,8 +65,9 @@ const statusLabels = {
   hired: "รับเข้าทำงาน",
 };
 
-export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, onDelete }: CandidateDetailDialogProps) {
+export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, onDelete, onInterviewUpdate }: CandidateDetailDialogProps) {
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showInterviewDialog, setShowInterviewDialog] = useState(false);
   
   if (!candidate) return null;
 
@@ -71,6 +78,10 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
   const handleConfirmDelete = () => {
     onDelete();
     setShowDeleteAlert(false);
+  };
+
+  const handleInterviewSave = (interviews: any) => {
+    onInterviewUpdate(candidate.id, interviews);
   };
 
   return (
@@ -220,84 +231,113 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
 
           <Separator />
 
-          {/* Test Score - Interview Details */}
+          {/* Test Scores */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Test Score</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-semibold text-sm bg-muted/50">Interviews By HR</th>
-                    <th className="text-left p-3 font-semibold text-sm bg-muted/50">Interview Date</th>
-                    <th className="text-left p-3 font-semibold text-sm bg-muted/50">Yes/No</th>
-                    <th className="text-left p-3 font-semibold text-sm bg-muted/50">Feedback Interview</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className="p-3 text-sm"></td>
-                    <td className="p-3 text-sm">{candidate.interviews?.hr?.date || "-"}</td>
-                    <td className="p-3 text-sm">
+            <h3 className="text-lg font-semibold mb-4">คะแนนแบบทดสอบ</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 border rounded-lg bg-muted/20">
+                <div className="text-sm text-muted-foreground mb-1">แบบทดสอบส่วนกลาง (HR)</div>
+                <div className="text-3xl font-bold text-primary">
+                  {candidate.testScores?.hrTest || "-"}
+                  {candidate.testScores?.hrTest && <span className="text-lg text-muted-foreground">/100</span>}
+                </div>
+              </div>
+              <div className="p-4 border rounded-lg bg-muted/20">
+                <div className="text-sm text-muted-foreground mb-1">แบบทดสอบเฉพาะแผนก</div>
+                <div className="text-3xl font-bold text-primary">
+                  {candidate.testScores?.departmentTest || "-"}
+                  {candidate.testScores?.departmentTest && <span className="text-lg text-muted-foreground">/100</span>}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Interview Details */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">ข้อมูลการสัมภาษณ์</h3>
+              <Button variant="outline" size="sm" onClick={() => setShowInterviewDialog(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                แก้ไข
+              </Button>
+            </div>
+            <div className="space-y-4">
+              {/* HR Interview */}
+              <div className="p-4 border rounded-lg">
+                <div className="font-semibold text-sm mb-3">สัมภาษณ์โดย HR</div>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <div className="text-muted-foreground mb-1">วันที่สัมภาษณ์</div>
+                    <div>{candidate.interviews?.hr?.date || "-"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground mb-1">ผลการสัมภาษณ์</div>
+                    <div>
                       {candidate.interviews?.hr?.passed !== undefined ? (
                         <Badge variant={candidate.interviews.hr.passed ? "default" : "destructive"}>
-                          {candidate.interviews.hr.passed ? "Yes" : "No"}
+                          {candidate.interviews.hr.passed ? "ผ่าน" : "ไม่ผ่าน"}
                         </Badge>
                       ) : "-"}
-                    </td>
-                    <td className="p-3 text-sm">{candidate.interviews?.hr?.feedback || "-"}</td>
-                  </tr>
-                </tbody>
-              </table>
+                    </div>
+                  </div>
+                  <div className="col-span-3">
+                    <div className="text-muted-foreground mb-1">ข้อคิดเห็น</div>
+                    <div>{candidate.interviews?.hr?.feedback || "-"}</div>
+                  </div>
+                </div>
+              </div>
 
-              <table className="w-full border-collapse mt-4">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-semibold text-sm bg-muted/50">Interviews By Department</th>
-                    <th className="text-left p-3 font-semibold text-sm bg-muted/50">Interview Date</th>
-                    <th className="text-left p-3 font-semibold text-sm bg-muted/50">Yes/No</th>
-                    <th className="text-left p-3 font-semibold text-sm bg-muted/50">Feedback Interview</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className="p-3 text-sm"></td>
-                    <td className="p-3 text-sm">{candidate.interviews?.manager?.date || "-"}</td>
-                    <td className="p-3 text-sm">
+              {/* Manager Interview */}
+              <div className="p-4 border rounded-lg">
+                <div className="font-semibold text-sm mb-3">สัมภาษณ์โดยหัวหน้าแผนก</div>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <div className="text-muted-foreground mb-1">วันที่สัมภาษณ์</div>
+                    <div>{candidate.interviews?.manager?.date || "-"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground mb-1">ผลการสัมภาษณ์</div>
+                    <div>
                       {candidate.interviews?.manager?.passed !== undefined ? (
                         <Badge variant={candidate.interviews.manager.passed ? "default" : "destructive"}>
-                          {candidate.interviews.manager.passed ? "Yes" : "No"}
+                          {candidate.interviews.manager.passed ? "ผ่าน" : "ไม่ผ่าน"}
                         </Badge>
                       ) : "-"}
-                    </td>
-                    <td className="p-3 text-sm">{candidate.interviews?.manager?.feedback || "-"}</td>
-                  </tr>
-                </tbody>
-              </table>
+                    </div>
+                  </div>
+                  <div className="col-span-3">
+                    <div className="text-muted-foreground mb-1">ข้อคิดเห็น</div>
+                    <div>{candidate.interviews?.manager?.feedback || "-"}</div>
+                  </div>
+                </div>
+              </div>
 
-              <table className="w-full border-collapse mt-4">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3 font-semibold text-sm bg-muted/50">Interviews By IS Team</th>
-                    <th className="text-left p-3 font-semibold text-sm bg-muted/50">Interview Date</th>
-                    <th className="text-left p-3 font-semibold text-sm bg-muted/50">Yes/No</th>
-                    <th className="text-left p-3 font-semibold text-sm bg-muted/50">Feedback Interview</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className="p-3 text-sm"></td>
-                    <td className="p-3 text-sm">{candidate.interviews?.isTeam?.date || "-"}</td>
-                    <td className="p-3 text-sm">
+              {/* IS Team Interview */}
+              <div className="p-4 border rounded-lg">
+                <div className="font-semibold text-sm mb-3">สัมภาษณ์โดยทีม IS</div>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <div className="text-muted-foreground mb-1">วันที่สัมภาษณ์</div>
+                    <div>{candidate.interviews?.isTeam?.date || "-"}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground mb-1">ผลการสัมภาษณ์</div>
+                    <div>
                       {candidate.interviews?.isTeam?.passed !== undefined ? (
                         <Badge variant={candidate.interviews.isTeam.passed ? "default" : "destructive"}>
-                          {candidate.interviews.isTeam.passed ? "Yes" : "No"}
+                          {candidate.interviews.isTeam.passed ? "ผ่าน" : "ไม่ผ่าน"}
                         </Badge>
                       ) : "-"}
-                    </td>
-                    <td className="p-3 text-sm">{candidate.interviews?.isTeam?.feedback || "-"}</td>
-                  </tr>
-                </tbody>
-              </table>
+                    </div>
+                  </div>
+                  <div className="col-span-3">
+                    <div className="text-muted-foreground mb-1">ข้อคิดเห็น</div>
+                    <div>{candidate.interviews?.isTeam?.feedback || "-"}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -330,6 +370,13 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CandidateInterviewDialog
+        interviews={candidate.interviews}
+        open={showInterviewDialog}
+        onOpenChange={setShowInterviewDialog}
+        onSave={handleInterviewSave}
+      />
     </Dialog>
   );
 }
