@@ -21,8 +21,8 @@ export function ContactMap() {
             <div>
               <p className="font-semibold mb-1">ที่อยู่</p>
               <p className="text-sm text-muted-foreground">
-                123 ถนนสุขุมวิท แขวงคลองเตย<br />
-                เขตคลองเตย กรุงเทพมหานคร 10110
+                <strong>สำนักงานใหญ่:</strong> 42 อาคารไอ ซี พี ชั้น 5 ถนนสุรวงศ์ แขวงสี่พระยา เขตบางรัก กรุงเทพมหานคร 10500<br />
+                <strong>โรงงานนครปฐม:</strong> 151 หมู่ที่ 8 ตำบลสามวายเผือก อำเภอเมืองนครปฐม จังหวัดนครปฐม 73000
               </p>
             </div>
           </div>
@@ -34,8 +34,8 @@ export function ContactMap() {
             <div>
               <p className="font-semibold mb-1">โทรศัพท์</p>
               <p className="text-sm text-muted-foreground">
-                02-123-4567<br />
-                095-123-4567
+                02-0299888 ต่อ 101<br />
+                065-5091216
               </p>
             </div>
           </div>
@@ -47,8 +47,7 @@ export function ContactMap() {
             <div>
               <p className="font-semibold mb-1">อีเมล</p>
               <p className="text-sm text-muted-foreground">
-                contact@talentxray.com<br />
-                support@talentxray.com
+                hr@icpladda.com
               </p>
             </div>
           </div>
@@ -60,8 +59,8 @@ export function ContactMap() {
             <div>
               <p className="font-semibold mb-1">เวลาทำการ</p>
               <p className="text-sm text-muted-foreground">
-                จันทร์ - ศุกร์: 9:00 - 18:00<br />
-                เสาร์ - อาทิตย์: ปิดทำการ
+                จันทร์-ศุกร์ 8.30-17.30 น.<br />
+                เสาร์-อาทิตย์ ปิดทำการ
               </p>
             </div>
           </div>
@@ -82,10 +81,10 @@ export function ContactMap() {
               <MapPin className="h-16 w-16 mx-auto mb-4 text-primary/50" />
               <p className="text-lg font-semibold mb-2">แผนที่บริษัท</p>
               <p className="text-sm text-muted-foreground mb-1">
-                123 ถนนสุขุมวิท แขวงคลองเตย
+                สำนักงานใหญ่: 42 อาคารไอ ซี พี ชั้น 5 ถนนสุรวงศ์
               </p>
               <p className="text-sm text-muted-foreground">
-                เขตคลองเตย กรุงเทพมหานคร 10110
+                แขวงสี่พระยา เขตบางรัก กรุงเทพมหานคร 10500
               </p>
             </div>
           </div>
