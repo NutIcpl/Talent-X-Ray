@@ -129,46 +129,6 @@ export function JobDetailDialog({ job, open, onOpenChange, onEdit, onDelete, onV
 
           <Separator />
 
-          {/* Statistics */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Users className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold text-lg">สถิติการสมัคร</h3>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Users className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-muted-foreground">ผู้สมัครทั้งหมด</span>
-                </div>
-                <p className="text-3xl font-bold text-primary">{job.applicants}</p>
-              </div>
-              <div className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <Clock className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm text-muted-foreground">สัมภาษณ์แล้ว</span>
-                </div>
-                <p className="text-3xl font-bold text-blue-600">{job.interviewStats.total}</p>
-              </div>
-              <div className="bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  <span className="text-sm text-muted-foreground">ผ่าน</span>
-                </div>
-                <p className="text-3xl font-bold text-green-600">{job.interviewStats.passed}</p>
-              </div>
-              <div className="bg-gradient-to-br from-red-500/10 to-red-500/5 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <XCircle className="h-4 w-4 text-red-600" />
-                  <span className="text-sm text-muted-foreground">ไม่ผ่าน</span>
-                </div>
-                <p className="text-3xl font-bold text-red-600">{job.interviewStats.failed}</p>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
           {/* Job Description */}
           <div>
             <h3 className="font-semibold text-lg mb-3">รายละเอียดงาน</h3>

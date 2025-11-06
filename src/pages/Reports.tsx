@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Briefcase, TrendingUp, ArrowUp, Users, Clock } from "lucide-react";
+import { Download, Briefcase, TrendingUp, ArrowUp, Users, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -14,6 +14,11 @@ interface Position {
   daysToHire: number;
   status: "open" | "filled" | "closed";
   applicants: number;
+  interviewStats: {
+    total: number;
+    passed: number;
+    failed: number;
+  };
 }
 
 export default function Reports() {
@@ -26,7 +31,12 @@ export default function Reports() {
       endDate: "2024-02-28",
       daysToHire: 44,
       status: "filled",
-      applicants: 124
+      applicants: 124,
+      interviewStats: {
+        total: 45,
+        passed: 20,
+        failed: 25
+      }
     },
     {
       id: "2",
@@ -36,7 +46,12 @@ export default function Reports() {
       endDate: "2024-03-10",
       daysToHire: 38,
       status: "filled",
-      applicants: 89
+      applicants: 89,
+      interviewStats: {
+        total: 30,
+        passed: 15,
+        failed: 15
+      }
     },
     {
       id: "3",
@@ -46,7 +61,12 @@ export default function Reports() {
       endDate: "2024-03-20",
       daysToHire: 34,
       status: "filled",
-      applicants: 67
+      applicants: 67,
+      interviewStats: {
+        total: 28,
+        passed: 12,
+        failed: 16
+      }
     },
     {
       id: "4",
@@ -55,7 +75,12 @@ export default function Reports() {
       startDate: "2024-03-01",
       daysToHire: 18,
       status: "open",
-      applicants: 45
+      applicants: 45,
+      interviewStats: {
+        total: 18,
+        passed: 8,
+        failed: 10
+      }
     },
     {
       id: "5",
@@ -64,7 +89,12 @@ export default function Reports() {
       startDate: "2024-03-10",
       daysToHire: 12,
       status: "open",
-      applicants: 32
+      applicants: 32,
+      interviewStats: {
+        total: 12,
+        passed: 5,
+        failed: 7
+      }
     },
     {
       id: "6",
@@ -74,7 +104,12 @@ export default function Reports() {
       endDate: "2024-03-05",
       daysToHire: 45,
       status: "filled",
-      applicants: 56
+      applicants: 56,
+      interviewStats: {
+        total: 22,
+        passed: 10,
+        failed: 12
+      }
     }
   ]);
 
@@ -226,6 +261,84 @@ export default function Reports() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-xl">สถิติการสมัครของแต่ละตำแหน่ง</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">รายละเอียดจำนวนผู้สมัครและผลการสัมภาษณ์แต่ละตำแหน่ง</p>
+          </div>
+          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+            <Users className="h-5 w-5 text-white" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ตำแหน่ง</TableHead>
+                  <TableHead>แผนก</TableHead>
+                  <TableHead className="text-center">ผู้สมัครทั้งหมด</TableHead>
+                  <TableHead className="text-center">สัมภาษณ์แล้ว</TableHead>
+                  <TableHead className="text-center">ผ่าน</TableHead>
+                  <TableHead className="text-center">ไม่ผ่าน</TableHead>
+                  <TableHead className="text-center">สถานะ</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {positions.map((position) => (
+                  <TableRow key={position.id}>
+                    <TableCell className="font-medium">{position.title}</TableCell>
+                    <TableCell>{position.department}</TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Users className="h-4 w-4 text-primary" />
+                        <span className="font-bold text-primary">{position.applicants}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Clock className="h-4 w-4 text-blue-600" />
+                        <span className="font-bold text-blue-600">{position.interviewStats.total}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="font-bold text-green-600">{position.interviewStats.passed}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <XCircle className="h-4 w-4 text-red-600" />
+                        <span className="font-bold text-red-600">{position.interviewStats.failed}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge 
+                        variant={
+                          position.status === "filled" 
+                            ? "default" 
+                            : position.status === "open" 
+                            ? "secondary" 
+                            : "outline"
+                        }
+                      >
+                        {position.status === "filled" 
+                          ? "เต็มแล้ว" 
+                          : position.status === "open" 
+                          ? "เปิดรับ" 
+                          : "ปิด"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
