@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useNotifications } from "@/contexts/NotificationContext";
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -79,10 +80,13 @@ const pipelineSteps = [
 ];
 
 export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, onDelete, onInterviewUpdate, onTestScoreUpdate, onStatusChange }: CandidateDetailDialogProps) {
+  const { addNotification } = useNotifications();
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [showTestScoreDialog, setShowTestScoreDialog] = useState(false);
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [activeInterview, setActiveInterview] = useState<'hr' | 'manager' | 'isTeam' | null>(null);
+  const [showPipelineConfirm, setShowPipelineConfirm] = useState(false);
+  const [selectedPipelineStep, setSelectedPipelineStep] = useState<string | null>(null);
   
   if (!candidate) return null;
 
@@ -90,8 +94,65 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
   
   const handleStatusChange = (status: string) => {
     if (onStatusChange) {
+      const statusLabelsMap: Record<string, string> = {
+        shortlisted: "Shortlist",
+        interested: "Interested",
+        not_interested: "Not interested",
+      };
+      
       onStatusChange(candidate.id, status);
+      
+      addNotification({
+        type: 'status_change',
+        title: 'เปลี่ยนสถานะผู้สมัคร',
+        description: `ย้าย ${candidate.name} ไปยังแท็บ ${statusLabelsMap[status]}`,
+        candidateName: candidate.name,
+        oldStatus: statusLabelsMap[candidate.status],
+        newStatus: statusLabelsMap[status],
+      });
+      
       onOpenChange(false);
+    }
+  };
+
+  const handlePipelineStepClick = (stepKey: string) => {
+    if (stepKey !== candidate.pipelineStatus) {
+      setSelectedPipelineStep(stepKey);
+      setShowPipelineConfirm(true);
+    }
+  };
+
+  const handleConfirmPipelineChange = () => {
+    if (selectedPipelineStep && onStatusChange) {
+      const stepLabels: Record<string, string> = {
+        pre_screening: 'Pre-screening',
+        interview_1: 'Interview 1',
+        interview_2: 'Interview 2',
+        offer: 'Offer',
+        hired: 'Hired',
+      };
+      
+      // Update pipeline status through a custom handler or adapt the existing one
+      // For now, we'll use a workaround by updating the candidate directly
+      const event = new CustomEvent('pipelineStatusChange', {
+        detail: {
+          candidateId: candidate.id,
+          newStatus: selectedPipelineStep,
+        }
+      });
+      window.dispatchEvent(event);
+      
+      addNotification({
+        type: 'status_change',
+        title: 'เปลี่ยน Pipeline Status',
+        description: `เปลี่ยนสถานะของ ${candidate.name} เป็น ${stepLabels[selectedPipelineStep]}`,
+        candidateName: candidate.name,
+        oldStatus: stepLabels[candidate.pipelineStatus || 'pre_screening'],
+        newStatus: stepLabels[selectedPipelineStep],
+      });
+      
+      setShowPipelineConfirm(false);
+      setSelectedPipelineStep(null);
     }
   };
 
@@ -230,17 +291,21 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                 return (
                   <div key={step.key} className="flex items-center flex-1">
                     <div className="flex flex-col items-center flex-1">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
-                        isCompleted 
-                          ? 'bg-primary border-primary text-primary-foreground' 
-                          : 'bg-background border-muted-foreground/30 text-muted-foreground'
-                      }`}>
+                      <button
+                        onClick={() => handlePipelineStepClick(step.key)}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
+                          isCompleted 
+                            ? 'bg-primary border-primary text-primary-foreground hover:scale-110' 
+                            : 'bg-background border-muted-foreground/30 text-muted-foreground hover:border-primary/50 hover:scale-110'
+                        } ${!isCurrent && 'cursor-pointer'}`}
+                        disabled={isCurrent}
+                      >
                         {isCompleted ? (
                           <CheckCircle2 className="h-5 w-5" />
                         ) : (
                           <Circle className="h-5 w-5" />
                         )}
-                      </div>
+                      </button>
                       <span className={`text-xs mt-2 text-center ${isCurrent ? 'font-semibold' : 'text-muted-foreground'}`}>
                         {step.label}
                       </span>
@@ -525,6 +590,27 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
         open={showResumeDialog}
         onOpenChange={setShowResumeDialog}
       />
+
+      <AlertDialog open={showPipelineConfirm} onOpenChange={setShowPipelineConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการเปลี่ยน Pipeline Status</AlertDialogTitle>
+            <AlertDialogDescription>
+              คุณต้องการเปลี่ยนสถานะของ <span className="font-semibold">{candidate.name}</span> เป็น{' '}
+              <span className="font-semibold">
+                {pipelineSteps.find(s => s.key === selectedPipelineStep)?.label}
+              </span>{' '}
+              ใช่หรือไม่?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmPipelineChange}>
+              ยืนยัน
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Search, Filter, Star, UserPlus } from "lucide-react";
 import { CandidateDetailDialog } from "@/components/candidates/CandidateDetailDialog";
 import { CandidateFormDialog } from "@/components/candidates/CandidateFormDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/contexts/NotificationContext";
 
 const initialCandidates = [
   {
@@ -151,6 +152,7 @@ const statusLabels = {
 
 export default function Candidates() {
   const { toast } = useToast();
+  const { addNotification } = useNotifications();
   const [candidates, setCandidates] = useState(initialCandidates);
   const [selectedCandidate, setSelectedCandidate] = useState<typeof initialCandidates[0] | null>(null);
   const [editingCandidate, setEditingCandidate] = useState<typeof initialCandidates[0] | null>(null);
@@ -159,6 +161,29 @@ export default function Candidates() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
+
+  useEffect(() => {
+    const handlePipelineChange = (event: CustomEvent) => {
+      const { candidateId, newStatus } = event.detail;
+      setCandidates(prev =>
+        prev.map(candidate =>
+          candidate.id === candidateId
+            ? { ...candidate, pipelineStatus: newStatus }
+            : candidate
+        )
+      );
+      setSelectedCandidate(prev => 
+        prev && prev.id === candidateId 
+          ? { ...prev, pipelineStatus: newStatus }
+          : prev
+      );
+    };
+
+    window.addEventListener('pipelineStatusChange' as any, handlePipelineChange);
+    return () => {
+      window.removeEventListener('pipelineStatusChange' as any, handlePipelineChange);
+    };
+  }, []);
 
   // Get unique positions for filter
   const uniquePositions = useMemo(() => {
@@ -253,13 +278,33 @@ export default function Candidates() {
   };
 
   const handleStatusChange = (candidateId: number, status: string) => {
+    const candidate = candidates.find(c => c.id === candidateId);
+    
     setCandidates(candidates.map(c => 
       c.id === candidateId ? { ...c, status } : c
     ));
     setSelectedCandidate(prev => prev ? { ...prev, status } : null);
+    
+    const statusLabelsMap: Record<string, string> = {
+      shortlisted: "Shortlist",
+      interested: "Interested",
+      not_interested: "Not interested",
+    };
+    
+    if (candidate) {
+      addNotification({
+        type: 'status_change',
+        title: 'เปลี่ยนสถานะผู้สมัคร',
+        description: `ย้าย ${candidate.name} ไปยังแท็บ ${statusLabelsMap[status]}`,
+        candidateName: candidate.name,
+        oldStatus: statusLabels[candidate.status as keyof typeof statusLabels],
+        newStatus: statusLabelsMap[status],
+      });
+    }
+    
     toast({
       title: "เปลี่ยนสถานะแล้ว",
-      description: `เปลี่ยนสถานะผู้สมัครเป็น ${statusLabels[status as keyof typeof statusLabels]} แล้ว`,
+      description: `ย้ายไปยังแท็บ ${statusLabelsMap[status]} แล้ว`,
     });
   };
 

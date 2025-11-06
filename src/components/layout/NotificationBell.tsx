@@ -1,4 +1,4 @@
-import { Bell } from "lucide-react";
+import { Bell, X, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,32 +10,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-const notifications = [
-  {
-    id: 1,
-    title: "ผู้สมัครใหม่",
-    description: "มีผู้สมัครใหม่ 5 คนยังไม่ได้ตรวจสอบ",
-    time: "5 นาทีที่แล้ว",
-    unread: true,
-  },
-  {
-    id: 2,
-    title: "การสัมภาษณ์ใกล้เริ่ม",
-    description: "สัมภาษณ์รอบบ่ายจะเริ่มในอีก 30 นาที",
-    time: "30 นาทีที่แล้ว",
-    unread: true,
-  },
-  {
-    id: 3,
-    title: "การสัมภาษณ์เสร็จสิ้น",
-    description: "การสัมภาษณ์กับ อรุณ สว่างไสว เสร็จสิ้นแล้ว",
-    time: "1 ชั่วโมงที่แล้ว",
-    unread: false,
-  },
-];
+import { useNotifications } from "@/contexts/NotificationContext";
 
 export function NotificationBell() {
+  const { notifications, markAsRead, markAllAsRead, clearNotification } = useNotifications();
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
@@ -53,33 +31,78 @@ export function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
-        <DropdownMenuLabel>การแจ้งเตือน</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <ScrollArea className="h-[300px]">
-          {notifications.map((notification) => (
-            <DropdownMenuItem
-              key={notification.id}
-              className="flex flex-col items-start p-4 cursor-pointer"
+      <DropdownMenuContent align="end" className="w-96">
+        <div className="flex items-center justify-between px-4 py-2">
+          <DropdownMenuLabel className="p-0">การแจ้งเตือน</DropdownMenuLabel>
+          {unreadCount > 0 && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 text-xs"
+              onClick={markAllAsRead}
             >
-              <div className="flex items-start justify-between w-full">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-sm">{notification.title}</p>
-                    {notification.unread && (
-                      <div className="h-2 w-2 rounded-full bg-primary" />
-                    )}
+              <CheckCheck className="h-3 w-3 mr-1" />
+              อ่านทั้งหมด
+            </Button>
+          )}
+        </div>
+        <DropdownMenuSeparator />
+        <ScrollArea className="h-[400px]">
+          {notifications.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              ไม่มีการแจ้งเตือน
+            </div>
+          ) : (
+            notifications.map((notification) => (
+              <div
+                key={notification.id}
+                className="relative group"
+              >
+                <DropdownMenuItem
+                  className="flex flex-col items-start p-4 cursor-pointer"
+                  onClick={() => markAsRead(notification.id)}
+                >
+                  <div className="flex items-start justify-between w-full">
+                    <div className="flex-1 pr-6">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm">{notification.title}</p>
+                        {notification.unread && (
+                          <div className="h-2 w-2 rounded-full bg-primary" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {notification.description}
+                      </p>
+                      {notification.type === 'status_change' && notification.candidateName && (
+                        <div className="mt-2 text-xs">
+                          <span className="font-medium">{notification.candidateName}</span>
+                          {notification.oldStatus && notification.newStatus && (
+                            <span className="text-muted-foreground">
+                              {' '}• {notification.oldStatus} → {notification.newStatus}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {notification.time}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {notification.description}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {notification.time}
-                  </p>
-                </div>
+                </DropdownMenuItem>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-3 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearNotification(notification.id);
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
               </div>
-            </DropdownMenuItem>
-          ))}
+            ))
+          )}
         </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>
