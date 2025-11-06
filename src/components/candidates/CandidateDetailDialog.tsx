@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Phone, MapPin, Calendar, Briefcase, GraduationCap, Star, FileText, Edit, Trash2 } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Briefcase, GraduationCap, Star, FileText, Edit, Trash2, CheckCircle2, Circle, Heart, X } from "lucide-react";
 import { SingleInterviewDialog } from "./SingleInterviewDialog";
 import { TestScoreDialog } from "./TestScoreDialog";
 import { ResumeDialog } from "./ResumeDialog";
@@ -28,6 +28,7 @@ interface CandidateDetailDialogProps {
     skills: string[];
     appliedDate: string;
     status: string;
+    pipelineStatus?: string;
     email: string;
     phone: string;
     location: string;
@@ -50,6 +51,7 @@ interface CandidateDetailDialogProps {
   onDelete: () => void;
   onInterviewUpdate: (candidateId: number, interviews: any) => void;
   onTestScoreUpdate: (candidateId: number, testScores: any) => void;
+  onStatusChange?: (candidateId: number, status: string) => void;
 }
 
 const statusColors = {
@@ -68,13 +70,30 @@ const statusLabels = {
   hired: "รับเข้าทำงาน",
 };
 
-export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, onDelete, onInterviewUpdate, onTestScoreUpdate }: CandidateDetailDialogProps) {
+const pipelineSteps = [
+  { key: 'pre_screening', label: 'Pre-screening' },
+  { key: 'interview_1', label: 'Interview 1' },
+  { key: 'interview_2', label: 'Interview 2' },
+  { key: 'offer', label: 'Offer' },
+  { key: 'hired', label: 'Hired' },
+];
+
+export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, onDelete, onInterviewUpdate, onTestScoreUpdate, onStatusChange }: CandidateDetailDialogProps) {
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [showTestScoreDialog, setShowTestScoreDialog] = useState(false);
   const [showResumeDialog, setShowResumeDialog] = useState(false);
   const [activeInterview, setActiveInterview] = useState<'hr' | 'manager' | 'isTeam' | null>(null);
   
   if (!candidate) return null;
+
+  const currentPipelineIndex = pipelineSteps.findIndex(step => step.key === candidate.pipelineStatus);
+  
+  const handleStatusChange = (status: string) => {
+    if (onStatusChange) {
+      onStatusChange(candidate.id, status);
+      onOpenChange(false);
+    }
+  };
 
   const handleDeleteClick = () => {
     setShowDeleteAlert(true);
@@ -197,6 +216,44 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
             <p className="text-sm text-muted-foreground leading-relaxed">
               {candidate.summary}
             </p>
+          </div>
+
+          <Separator />
+
+          {/* Pipeline Status */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4">สถานะการสรรหา</h3>
+            <div className="flex items-center justify-between gap-2">
+              {pipelineSteps.map((step, index) => {
+                const isCompleted = currentPipelineIndex >= index;
+                const isCurrent = currentPipelineIndex === index;
+                return (
+                  <div key={step.key} className="flex items-center flex-1">
+                    <div className="flex flex-col items-center flex-1">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
+                        isCompleted 
+                          ? 'bg-primary border-primary text-primary-foreground' 
+                          : 'bg-background border-muted-foreground/30 text-muted-foreground'
+                      }`}>
+                        {isCompleted ? (
+                          <CheckCircle2 className="h-5 w-5" />
+                        ) : (
+                          <Circle className="h-5 w-5" />
+                        )}
+                      </div>
+                      <span className={`text-xs mt-2 text-center ${isCurrent ? 'font-semibold' : 'text-muted-foreground'}`}>
+                        {step.label}
+                      </span>
+                    </div>
+                    {index < pipelineSteps.length - 1 && (
+                      <div className={`h-0.5 flex-1 -mt-6 ${
+                        currentPipelineIndex > index ? 'bg-primary' : 'bg-muted-foreground/30'
+                      }`} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <Separator />
@@ -375,6 +432,39 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <Separator className="my-6" />
+
+        {/* Action Buttons */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4">จัดการผู้สมัคร</h3>
+          <div className="flex gap-3">
+            <Button 
+              variant={candidate.status === 'shortlisted' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={() => handleStatusChange('shortlisted')}
+            >
+              <Star className="h-4 w-4 mr-2" />
+              Shortlist
+            </Button>
+            <Button 
+              variant={candidate.status === 'interested' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={() => handleStatusChange('interested')}
+            >
+              <Heart className="h-4 w-4 mr-2" />
+              Interested
+            </Button>
+            <Button 
+              variant={candidate.status === 'not_interested' ? 'destructive' : 'outline'}
+              className="flex-1"
+              onClick={() => handleStatusChange('not_interested')}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Not interested
+            </Button>
           </div>
         </div>
 

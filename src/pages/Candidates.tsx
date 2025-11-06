@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Filter, Star, UserPlus } from "lucide-react";
 import { CandidateDetailDialog } from "@/components/candidates/CandidateDetailDialog";
 import { CandidateFormDialog } from "@/components/candidates/CandidateFormDialog";
@@ -19,6 +21,7 @@ const initialCandidates = [
     skills: ["React", "Node.js", "TypeScript"],
     appliedDate: "2 วันที่แล้ว",
     status: "screening",
+    pipelineStatus: "interview_1",
     email: "somchai@email.com",
     phone: "081-234-5678",
     location: "กรุงเทพมหานคร",
@@ -44,6 +47,7 @@ const initialCandidates = [
     skills: ["Figma", "UI/UX", "Design Systems"],
     appliedDate: "1 วันที่แล้ว",
     status: "interview",
+    pipelineStatus: "interview_2",
     email: "somying@email.com",
     phone: "082-345-6789",
     location: "กรุงเทพมหานคร",
@@ -68,6 +72,7 @@ const initialCandidates = [
     skills: ["Python", "Machine Learning", "SQL"],
     appliedDate: "3 วันที่แล้ว",
     status: "screening",
+    pipelineStatus: "pre_screening",
     email: "prasert@email.com",
     phone: "083-456-7890",
     location: "นนทบุรี",
@@ -84,6 +89,7 @@ const initialCandidates = [
     skills: ["Product Strategy", "Agile", "Analytics"],
     appliedDate: "4 วันที่แล้ว",
     status: "shortlisted",
+    pipelineStatus: "offer",
     email: "wichai@email.com",
     phone: "084-567-8901",
     location: "กรุงเทพมหานคร",
@@ -100,6 +106,7 @@ const initialCandidates = [
     skills: ["Vue.js", "CSS", "JavaScript"],
     appliedDate: "5 วันที่แล้ว",
     status: "interview",
+    pipelineStatus: "interview_1",
     email: "napa@email.com",
     phone: "085-678-9012",
     location: "ปทุมธานี",
@@ -116,6 +123,7 @@ const initialCandidates = [
     skills: ["Java", "Spring Boot", "Microservices"],
     appliedDate: "1 สัปดาห์ที่แล้ว",
     status: "screening",
+    pipelineStatus: "pre_screening",
     email: "thanapol@email.com",
     phone: "086-789-0123",
     location: "สมุทรปราการ",
@@ -150,18 +158,27 @@ export default function Candidates() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
+
+  // Get unique positions for filter
+  const uniquePositions = useMemo(() => {
+    return Array.from(new Set(candidates.map(c => c.position))).sort();
+  }, [candidates]);
 
   const filteredCandidates = candidates.filter(candidate => {
     const matchesSearch = candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       candidate.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
       candidate.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    if (activeTab === "all") return matchesSearch;
-    if (activeTab === "shortlist") return matchesSearch && candidate.status === "shortlisted";
-    if (activeTab === "interested") return matchesSearch && candidate.status === "interested";
-    if (activeTab === "not_interested") return matchesSearch && candidate.status === "not_interested";
+    const matchesPosition = selectedPositions.length === 0 || selectedPositions.includes(candidate.position);
+
+    let matchesTab = true;
+    if (activeTab === "all") matchesTab = true;
+    else if (activeTab === "shortlist") matchesTab = candidate.status === "shortlisted";
+    else if (activeTab === "interested") matchesTab = candidate.status === "interested";
+    else if (activeTab === "not_interested") matchesTab = candidate.status === "not_interested";
     
-    return matchesSearch;
+    return matchesSearch && matchesPosition && matchesTab;
   });
 
   const handleViewDetails = (candidate: typeof initialCandidates[0]) => {
@@ -235,6 +252,29 @@ export default function Candidates() {
     setIsFormOpen(true);
   };
 
+  const handleStatusChange = (candidateId: number, status: string) => {
+    setCandidates(candidates.map(c => 
+      c.id === candidateId ? { ...c, status } : c
+    ));
+    setSelectedCandidate(prev => prev ? { ...prev, status } : null);
+    toast({
+      title: "เปลี่ยนสถานะแล้ว",
+      description: `เปลี่ยนสถานะผู้สมัครเป็น ${statusLabels[status as keyof typeof statusLabels]} แล้ว`,
+    });
+  };
+
+  const togglePosition = (position: string) => {
+    setSelectedPositions(prev => 
+      prev.includes(position)
+        ? prev.filter(p => p !== position)
+        : [...prev, position]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedPositions([]);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -262,10 +302,48 @@ export default function Candidates() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Button variant="outline" className="gap-2">
-          <Filter className="h-4 w-4" />
-          ตัวกรอง
-        </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Filter className="h-4 w-4" />
+              ตัวกรอง
+              {selectedPositions.length > 0 && (
+                <Badge variant="secondary" className="ml-2 rounded-full px-2">
+                  {selectedPositions.length}
+                </Badge>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80" align="end">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">กรองตามตำแหน่ง</h4>
+                {selectedPositions.length > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    ล้างทั้งหมด
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-3">
+                {uniquePositions.map((position) => (
+                  <div key={position} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={position}
+                      checked={selectedPositions.includes(position)}
+                      onCheckedChange={() => togglePosition(position)}
+                    />
+                    <label
+                      htmlFor={position}
+                      className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {position}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -343,6 +421,7 @@ export default function Candidates() {
         onDelete={() => selectedCandidate && handleDelete(selectedCandidate.id)}
         onInterviewUpdate={handleInterviewUpdate}
         onTestScoreUpdate={handleTestScoreUpdate}
+        onStatusChange={handleStatusChange}
       />
 
       <CandidateFormDialog
