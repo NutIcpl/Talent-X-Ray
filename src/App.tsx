@@ -7,6 +7,8 @@ import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import Dashboard from "./pages/Dashboard";
 import Jobs from "./pages/Jobs";
+import JobApplication from "./pages/JobApplication";
+import JobRequisitions from "./pages/JobRequisitions";
 import Candidates from "./pages/Candidates";
 import Interviews from "./pages/Interviews";
 import Reports from "./pages/Reports";
@@ -25,6 +27,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
             <Route path="/jobs" element={<DashboardLayout><Jobs /></DashboardLayout>} />
+            <Route path="/job-application" element={<DashboardLayout><JobApplication /></DashboardLayout>} />
+            <Route path="/job-requisitions" element={<DashboardLayout><JobRequisitions /></DashboardLayout>} />
             <Route path="/candidates" element={<DashboardLayout><Candidates /></DashboardLayout>} />
             <Route path="/interviews" element={<DashboardLayout><Interviews /></DashboardLayout>} />
             <Route path="/reports" element={<DashboardLayout><Reports /></DashboardLayout>} />

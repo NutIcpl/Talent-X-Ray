@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Briefcase, Calendar, FileText, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Calendar, FileText, Settings, FileUp, ClipboardList } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import {
   Sidebar,
@@ -15,6 +15,8 @@ import {
 const menuItems = [
   { title: "Home", url: "/", icon: LayoutDashboard },
   { title: "Jobs", url: "/jobs", icon: Briefcase },
+  { title: "Job Application", url: "/job-application", icon: FileUp },
+  { title: "Job Requisitions", url: "/job-requisitions", icon: ClipboardList },
   { title: "Candidates", url: "/candidates", icon: Users },
   { title: "Interviews", url: "/interviews", icon: Calendar },
   { title: "Reports", url: "/reports", icon: FileText },
