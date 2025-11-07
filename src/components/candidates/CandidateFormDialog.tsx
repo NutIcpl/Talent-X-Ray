@@ -15,10 +15,10 @@ const candidateFormSchema = z.object({
   experience: z.string().min(1, "กรุณาระบุประสบการณ์"),
   email: z.string().email("อีเมลไม่ถูกต้อง"),
   phone: z.string().min(9, "เบอร์โทรศัพท์ไม่ถูกต้อง"),
-  location: z.string().min(1, "กรุณาระบุที่อยู่"),
-  education: z.string().min(1, "กรุณาระบุการศึกษา"),
+  location: z.string().optional(),
+  education: z.string().optional(),
   previousCompany: z.string().optional(),
-  summary: z.string().min(10, "กรุณาระบุข้อมูลสรุปอย่างน้อย 10 ตัวอักษร"),
+  summary: z.string().optional(),
   skills: z.string().min(1, "กรุณาระบุทักษะ"),
   status: z.enum(["screening", "interview", "shortlisted", "rejected", "hired"]),
   score: z.number().min(0).max(100),
@@ -38,10 +38,10 @@ interface CandidateFormDialogProps {
     status: string;
     email: string;
     phone: string;
-    location: string;
-    education: string;
-    summary: string;
-    previousCompany: string;
+    location?: string;
+    education?: string;
+    summary?: string;
+    previousCompany?: string;
   } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;

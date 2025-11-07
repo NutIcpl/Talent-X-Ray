@@ -11,6 +11,7 @@ import { CandidateDetailDialog } from "@/components/candidates/CandidateDetailDi
 import { CandidateFormDialog } from "@/components/candidates/CandidateFormDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { useCandidates, Candidate } from "@/contexts/CandidatesContext";
 
 const initialCandidates = [
   {
@@ -153,9 +154,9 @@ const statusLabels = {
 export default function Candidates() {
   const { toast } = useToast();
   const { addNotification } = useNotifications();
-  const [candidates, setCandidates] = useState(initialCandidates);
-  const [selectedCandidate, setSelectedCandidate] = useState<typeof initialCandidates[0] | null>(null);
-  const [editingCandidate, setEditingCandidate] = useState<typeof initialCandidates[0] | null>(null);
+  const { candidates, updateCandidate, deleteCandidate } = useCandidates();
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -165,13 +166,7 @@ export default function Candidates() {
   useEffect(() => {
     const handlePipelineChange = (event: CustomEvent) => {
       const { candidateId, newStatus } = event.detail;
-      setCandidates(prev =>
-        prev.map(candidate =>
-          candidate.id === candidateId
-            ? { ...candidate, pipelineStatus: newStatus }
-            : candidate
-        )
-      );
+      updateCandidate(candidateId, { pipelineStatus: newStatus });
       setSelectedCandidate(prev => 
         prev && prev.id === candidateId 
           ? { ...prev, pipelineStatus: newStatus }
@@ -183,7 +178,7 @@ export default function Candidates() {
     return () => {
       window.removeEventListener('pipelineStatusChange' as any, handlePipelineChange);
     };
-  }, []);
+  }, [updateCandidate]);
 
   // Get unique positions for filter
   const uniquePositions = useMemo(() => {
@@ -206,20 +201,20 @@ export default function Candidates() {
     return matchesSearch && matchesPosition && matchesTab;
   });
 
-  const handleViewDetails = (candidate: typeof initialCandidates[0]) => {
+  const handleViewDetails = (candidate: Candidate) => {
     setSelectedCandidate(candidate);
     setIsDetailOpen(true);
   };
 
-  const handleEdit = (candidate: typeof initialCandidates[0]) => {
+  const handleEdit = (candidate: Candidate) => {
     setIsDetailOpen(false);
     setEditingCandidate(candidate);
     setIsFormOpen(true);
   };
 
-  const handleDelete = (candidateId: number) => {
+  const handleDeleteCandidate = (candidateId: number) => {
     const candidate = candidates.find(c => c.id === candidateId);
-    setCandidates(candidates.filter(c => c.id !== candidateId));
+    deleteCandidate(candidateId);
     setIsDetailOpen(false);
     toast({
       title: "ลบผู้สมัครแล้ว",
@@ -229,9 +224,7 @@ export default function Candidates() {
   };
 
   const handleInterviewUpdate = (candidateId: number, interviews: any) => {
-    setCandidates(candidates.map(c => 
-      c.id === candidateId ? { ...c, interviews } : c
-    ));
+    updateCandidate(candidateId, { interviews } as any);
     setSelectedCandidate(prev => prev ? { ...prev, interviews } : null);
     toast({
       title: "บันทึกข้อมูลแล้ว",
@@ -240,9 +233,7 @@ export default function Candidates() {
   };
 
   const handleTestScoreUpdate = (candidateId: number, testScores: any) => {
-    setCandidates(candidates.map(c => 
-      c.id === candidateId ? { ...c, testScores } : c
-    ));
+    updateCandidate(candidateId, { testScores } as any);
     setSelectedCandidate(prev => prev ? { ...prev, testScores } : null);
     toast({
       title: "บันทึกข้อมูลแล้ว",
@@ -253,17 +244,13 @@ export default function Candidates() {
   const handleSave = (candidateData: any) => {
     if (candidateData.id) {
       // Edit existing candidate
-      setCandidates(candidates.map(c => 
-        c.id === candidateData.id ? { ...candidateData } : c
-      ));
+      updateCandidate(candidateData.id, candidateData);
       toast({
         title: "บันทึกข้อมูลแล้ว",
         description: "แก้ไขข้อมูลผู้สมัครเรียบร้อยแล้ว",
       });
     } else {
-      // Add new candidate
-      const newCandidate = { ...candidateData, id: Math.max(...candidates.map(c => c.id)) + 1 };
-      setCandidates([...candidates, newCandidate]);
+      // Add new candidate - handled by context
       toast({
         title: "เพิ่มผู้สมัครแล้ว",
         description: "เพิ่มข้อมูลผู้สมัครเรียบร้อยแล้ว",
@@ -280,10 +267,8 @@ export default function Candidates() {
   const handleStatusChange = (candidateId: number, status: string) => {
     const candidate = candidates.find(c => c.id === candidateId);
     
-    setCandidates(candidates.map(c => 
-      c.id === candidateId ? { ...c, status } : c
-    ));
-    setSelectedCandidate(prev => prev ? { ...prev, status } : null);
+    updateCandidate(candidateId, { status: status as Candidate['status'] });
+    setSelectedCandidate(prev => prev ? { ...prev, status: status as Candidate['status'] } : null);
     
     const statusLabelsMap: Record<string, string> = {
       shortlisted: "Shortlist",
@@ -463,7 +448,7 @@ export default function Candidates() {
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
         onEdit={() => handleEdit(selectedCandidate!)}
-        onDelete={() => selectedCandidate && handleDelete(selectedCandidate.id)}
+        onDelete={() => selectedCandidate && handleDeleteCandidate(selectedCandidate.id)}
         onInterviewUpdate={handleInterviewUpdate}
         onTestScoreUpdate={handleTestScoreUpdate}
         onStatusChange={handleStatusChange}

@@ -32,13 +32,13 @@ interface CandidateDetailDialogProps {
     pipelineStatus?: string;
     email: string;
     phone: string;
-    location: string;
-    education: string;
-    summary: string;
-    previousCompany: string;
+    location?: string;
+    education?: string;
+    summary?: string;
+    previousCompany?: string;
     testScores?: {
-      hrTest: number;
-      departmentTest: number;
+      hrTest?: number;
+      departmentTest?: number;
     };
     interviews?: {
       hr?: { date: string; passed: boolean; feedback: string };

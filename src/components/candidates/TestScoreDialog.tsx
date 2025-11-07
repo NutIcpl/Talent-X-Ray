@@ -16,12 +16,12 @@ type TestScoreFormValues = z.infer<typeof testScoreSchema>;
 
 interface TestScoreDialogProps {
   testScores?: {
-    hrTest: number;
-    departmentTest: number;
+    hrTest?: number;
+    departmentTest?: number;
   };
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (testScores: { hrTest: number; departmentTest: number }) => void;
+  onSave: (testScores: { hrTest?: number; departmentTest?: number }) => void;
 }
 
 export function TestScoreDialog({ testScores, open, onOpenChange, onSave }: TestScoreDialogProps) {

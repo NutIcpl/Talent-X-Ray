@@ -9,10 +9,10 @@ interface ResumeDialogProps {
     position: string;
     email: string;
     phone: string;
-    location: string;
-    education: string;
+    location?: string;
+    education?: string;
     experience: string;
-    previousCompany: string;
+    previousCompany?: string;
     summary: string;
     skills: string[];
   } | null;

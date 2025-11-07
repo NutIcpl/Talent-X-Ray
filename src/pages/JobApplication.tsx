@@ -7,9 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCandidates } from "@/contexts/CandidatesContext";
 
 const JobApplication = () => {
   const { toast } = useToast();
+  const { addCandidate } = useCandidates();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     position: "",
@@ -48,6 +50,18 @@ const JobApplication = () => {
       });
       return;
     }
+
+    // Add candidate to context
+    addCandidate({
+      name: formData.fullName,
+      email: formData.email,
+      phone: formData.phone || "-",
+      position: formData.position,
+      experience: "ระบุในเรซูเม่",
+      skills: [],
+      resumeFile: selectedFile.name,
+      coverLetter: formData.coverLetter,
+    });
 
     toast({
       title: "ส่งใบสมัครสำเร็จ",
