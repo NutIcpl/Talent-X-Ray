@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, FileText } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Upload, FileText, Plus, User, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCandidates } from "@/contexts/CandidatesContext";
 
@@ -13,12 +15,19 @@ const JobApplication = () => {
   const { toast } = useToast();
   const { addCandidate } = useCandidates();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
+  const [languages, setLanguages] = useState<Array<{ language: string; level: string }>>([
+    { language: "", level: "good" }
+  ]);
   const [formData, setFormData] = useState({
     position: "",
     fullName: "",
     email: "",
     phone: "",
     coverLetter: "",
+    informationSource: "",
+    privacyConsent: false,
   });
 
   const availablePositions = [
@@ -40,12 +49,47 @@ const JobApplication = () => {
     }
   };
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setProfilePhoto(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      toast({
+        title: "อัปโหลดรูปภาพสำเร็จ",
+        description: file.name,
+      });
+    }
+  };
+
+  const addLanguage = () => {
+    setLanguages([...languages, { language: "", level: "good" }]);
+  };
+
+  const removeLanguage = (index: number) => {
+    if (languages.length > 1) {
+      setLanguages(languages.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateLanguage = (index: number, field: "language" | "level", value: string) => {
+    const updated = [...languages];
+    updated[index][field] = value;
+    setLanguages(updated);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.position || !formData.fullName || !formData.email || !selectedFile) {
+    if (!formData.position || !formData.fullName || !formData.email || !selectedFile || !formData.privacyConsent) {
       toast({
         title: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        description: "กรุณากรอกข้อมูลทุกช่องที่มีเครื่องหมาย * และอัปโหลดเรซูเม่",
+        description: "กรุณากรอกข้อมูลทุกช่องที่มีเครื่องหมาย * อัปโหลดเรซูเม่ และยินยอมนโยบายความเป็นส่วนตัว",
         variant: "destructive",
       });
       return;
@@ -75,8 +119,13 @@ const JobApplication = () => {
       email: "",
       phone: "",
       coverLetter: "",
+      informationSource: "",
+      privacyConsent: false,
     });
     setSelectedFile(null);
+    setProfilePhoto(null);
+    setProfilePhotoPreview(null);
+    setLanguages([{ language: "", level: "good" }]);
   };
 
   return (
@@ -213,6 +262,165 @@ const JobApplication = () => {
               />
             </div>
 
+            {/* Profile Photo Upload */}
+            <div className="space-y-2">
+              <Label>รูป / Photo</Label>
+              <div className="flex items-start gap-4">
+                <div className="relative">
+                  <div className="w-32 h-32 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                    {profilePhotoPreview ? (
+                      <img 
+                        src={profilePhotoPreview} 
+                        alt="Profile preview" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-16 h-16 text-muted-foreground" />
+                    )}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <input
+                    id="profile-photo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                    className="hidden"
+                  />
+                  <label htmlFor="profile-photo">
+                    <Button type="button" variant="secondary" className="cursor-pointer" asChild>
+                      <span>Browse</span>
+                    </Button>
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    รองรับไฟล์ JPG, PNG (สูงสุด 5MB)
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Language Literacy */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>ระดับทักษะทางภาษา / Language Literacy</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addLanguage}
+                  className="gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  เพิ่มภาษา / Add a language
+                </Button>
+              </div>
+              
+              {languages.map((lang, index) => (
+                <div key={index} className="space-y-3 p-4 border rounded-lg">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1 space-y-2">
+                      <Select
+                        value={lang.language}
+                        onValueChange={(value) => updateLanguage(index, "language", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="ภาษาอังกฤษ / English" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="english">ภาษาอังกฤษ / English</SelectItem>
+                          <SelectItem value="chinese">ภาษาจีน / Chinese</SelectItem>
+                          <SelectItem value="japanese">ภาษาญี่ปุ่น / Japanese</SelectItem>
+                          <SelectItem value="korean">ภาษาเกาหลี / Korean</SelectItem>
+                          <SelectItem value="french">ภาษาฝรั่งเศส / French</SelectItem>
+                          <SelectItem value="german">ภาษาเยอรมัน / German</SelectItem>
+                          <SelectItem value="spanish">ภาษาสเปน / Spanish</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {languages.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeLanguage(index)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <RadioGroup
+                    value={lang.level}
+                    onValueChange={(value) => updateLanguage(index, "level", value)}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="excellent" id={`excellent-${index}`} />
+                      <Label htmlFor={`excellent-${index}`} className="font-normal">
+                        ดีมาก / Excellence
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="good" id={`good-${index}`} />
+                      <Label htmlFor={`good-${index}`} className="font-normal">
+                        ดี / Good
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="fair" id={`fair-${index}`} />
+                      <Label htmlFor={`fair-${index}`} className="font-normal">
+                        พอใช้ / Fair
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              ))}
+            </div>
+
+            {/* Information Source */}
+            <div className="space-y-2">
+              <Label htmlFor="informationSource">
+                ท่านทราบข้อมูลการสมัครจากที่ใด / Where do you get the information?
+              </Label>
+              <Select
+                value={formData.informationSource}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, informationSource: value })
+                }
+              >
+                <SelectTrigger id="informationSource">
+                  <SelectValue placeholder="เลือกช่องทางที่รับข่าวสาร / Selected" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="website">เว็บไซต์บริษัท / Company Website</SelectItem>
+                  <SelectItem value="jobboard">เว็บไซต์หางาน / Job Board</SelectItem>
+                  <SelectItem value="social-media">โซเชียลมีเดีย / Social Media</SelectItem>
+                  <SelectItem value="referral">เพื่อนแนะนำ / Referral</SelectItem>
+                  <SelectItem value="newspaper">หนังสือพิมพ์ / Newspaper</SelectItem>
+                  <SelectItem value="other">อื่นๆ / Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Privacy Consent */}
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="privacy"
+                checked={formData.privacyConsent}
+                onCheckedChange={(checked) =>
+                  setFormData({ ...formData, privacyConsent: checked as boolean })
+                }
+              />
+              <Label htmlFor="privacy" className="font-normal leading-relaxed">
+                ฉันยินยอมให้ข้อมูลและใช้งาน{" "}
+                <a href="#" className="text-primary underline">
+                  นโยบายความเป็นส่วนตัว
+                </a>{" "}
+                แล้ว <span className="text-destructive">*</span>
+              </Label>
+            </div>
+
             <div className="flex gap-4">
               <Button type="submit" className="flex-1">
                 ส่งใบสมัคร
@@ -227,8 +435,13 @@ const JobApplication = () => {
                     email: "",
                     phone: "",
                     coverLetter: "",
+                    informationSource: "",
+                    privacyConsent: false,
                   });
                   setSelectedFile(null);
+                  setProfilePhoto(null);
+                  setProfilePhotoPreview(null);
+                  setLanguages([{ language: "", level: "good" }]);
                 }}
               >
                 ล้างข้อมูล
