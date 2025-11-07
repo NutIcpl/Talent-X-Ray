@@ -7,7 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Plus, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -102,19 +109,20 @@ const JobRequisitions = () => {
     requestedBy: "",
   });
 
-  const departments = [
-    "Engineering",
-    "Marketing",
-    "Sales",
-    "Human Resources",
-    "Finance",
-    "Operations",
-  ];
+  const departments = ["Engineering", "Marketing", "Sales", "Human Resources", "Finance", "Operations"];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.department || !formData.position || !formData.dateNeeded || !formData.workLocation || !formData.reportsTo || !formData.justification || !formData.requestedBy) {
+
+    if (
+      !formData.department ||
+      !formData.position ||
+      !formData.dateNeeded ||
+      !formData.workLocation ||
+      !formData.reportsTo ||
+      !formData.justification ||
+      !formData.requestedBy
+    ) {
       toast({
         title: "กรุณากรอกข้อมูลให้ครบถ้วน",
         description: "กรุณากรอกข้อมูลทุกช่องที่มีเครื่องหมาย *",
@@ -152,7 +160,7 @@ const JobRequisitions = () => {
 
     setRequisitions([newRequisition, ...requisitions]);
     setOpen(false);
-    
+
     toast({
       title: "ส่งคำขออนุมัติสำเร็จ",
       description: `คำขออัตรากำลังสำหรับตำแหน่ง ${formData.position} ถูกส่งให้ CEO พิจารณาแล้ว`,
@@ -228,9 +236,7 @@ const JobRequisitions = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">คำขออนุมัติอัตรากำลัง</h1>
-          <p className="text-muted-foreground mt-2">
-            จัดการคำขออนุมัติตำแหน่งงานใหม่
-          </p>
+          <p className="text-muted-foreground mt-2">จัดการคำขออนุมัติตำแหน่งงานใหม่</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -241,16 +247,14 @@ const JobRequisitions = () => {
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>สร้างคำขออนุมัติอัตรากำลัง</DialogTitle>
-              <DialogDescription>
-                กรอกข้อมูลเพื่อขออนุมัติเปิดตำแหน่งงานใหม่
-              </DialogDescription>
+              <DialogTitle>สร้างคำขออนุมัติการจ้างงาน</DialogTitle>
+              <DialogDescription>กรอกข้อมูลเพื่อขออนุมัติเปิดตำแหน่งงานใหม่</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-6 mt-4">
               {/* ข้อมูลทั่วไป */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">ข้อมูลทั่วไป</h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="department">
@@ -258,9 +262,7 @@ const JobRequisitions = () => {
                     </Label>
                     <Select
                       value={formData.department}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, department: value })
-                      }
+                      onValueChange={(value) => setFormData({ ...formData, department: value })}
                     >
                       <SelectTrigger id="department">
                         <SelectValue placeholder="เลือกฝ่าย/แผนก" />
@@ -282,9 +284,7 @@ const JobRequisitions = () => {
                     <Input
                       id="position"
                       value={formData.position}
-                      onChange={(e) =>
-                        setFormData({ ...formData, position: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                       placeholder="เช่น Senior Software Engineer"
                     />
                   </div>
@@ -300,9 +300,7 @@ const JobRequisitions = () => {
                       type="number"
                       min="1"
                       value={formData.quantity}
-                      onChange={(e) =>
-                        setFormData({ ...formData, quantity: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                     />
                   </div>
 
@@ -314,9 +312,7 @@ const JobRequisitions = () => {
                       id="dateNeeded"
                       type="date"
                       value={formData.dateNeeded}
-                      onChange={(e) =>
-                        setFormData({ ...formData, dateNeeded: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, dateNeeded: e.target.value })}
                     />
                   </div>
 
@@ -327,9 +323,7 @@ const JobRequisitions = () => {
                     <Input
                       id="workLocation"
                       value={formData.workLocation}
-                      onChange={(e) =>
-                        setFormData({ ...formData, workLocation: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, workLocation: e.target.value })}
                       placeholder="เช่น กรุงเทพฯ"
                     />
                   </div>
@@ -342,9 +336,7 @@ const JobRequisitions = () => {
                   <Input
                     id="reportsTo"
                     value={formData.reportsTo}
-                    onChange={(e) =>
-                      setFormData({ ...formData, reportsTo: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, reportsTo: e.target.value })}
                     placeholder="เช่น ผู้จัดการฝ่าย, CEO"
                   />
                 </div>
@@ -356,9 +348,7 @@ const JobRequisitions = () => {
                   <Input
                     id="requestedBy"
                     value={formData.requestedBy}
-                    onChange={(e) =>
-                      setFormData({ ...formData, requestedBy: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, requestedBy: e.target.value })}
                     placeholder="ชื่อ-นามสกุล"
                   />
                 </div>
@@ -367,9 +357,11 @@ const JobRequisitions = () => {
               {/* ประเภทและเหตุผลของการจ้าง */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">ประเภท / เหตุผลของการจ้าง</h3>
-                
+
                 <div className="space-y-3">
-                  <Label>ประเภทการจ้าง <span className="text-destructive">*</span></Label>
+                  <Label>
+                    ประเภทการจ้าง <span className="text-destructive">*</span>
+                  </Label>
                   <Select
                     value={formData.hiringType}
                     onValueChange={(value: "replacement" | "permanent" | "temporary") =>
@@ -394,9 +386,7 @@ const JobRequisitions = () => {
                       <Input
                         id="replacementFor"
                         value={formData.replacementFor}
-                        onChange={(e) =>
-                          setFormData({ ...formData, replacementFor: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, replacementFor: e.target.value })}
                         placeholder="ชื่อพนักงานที่จะทดแทน"
                       />
                     </div>
@@ -406,9 +396,7 @@ const JobRequisitions = () => {
                         id="replacementDate"
                         type="date"
                         value={formData.replacementDate}
-                        onChange={(e) =>
-                          setFormData({ ...formData, replacementDate: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, replacementDate: e.target.value })}
                       />
                     </div>
                   </div>
@@ -420,9 +408,7 @@ const JobRequisitions = () => {
                     <Input
                       id="temporaryDuration"
                       value={formData.temporaryDuration}
-                      onChange={(e) =>
-                        setFormData({ ...formData, temporaryDuration: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, temporaryDuration: e.target.value })}
                       placeholder="เช่น 6 เดือน, 1 ปี"
                     />
                   </div>
@@ -435,9 +421,7 @@ const JobRequisitions = () => {
                   <Textarea
                     id="justification"
                     value={formData.justification}
-                    onChange={(e) =>
-                      setFormData({ ...formData, justification: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, justification: e.target.value })}
                     placeholder="อธิบายเหตุผลความจำเป็นในการเปิดรับตำแหน่งนี้..."
                     rows={3}
                   />
@@ -448,9 +432,7 @@ const JobRequisitions = () => {
                   <Input
                     id="jobDescriptionNo"
                     value={formData.jobDescriptionNo}
-                    onChange={(e) =>
-                      setFormData({ ...formData, jobDescriptionNo: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, jobDescriptionNo: e.target.value })}
                     placeholder="หากยังไม่มี กรุณาจัดทำและแนบมาด้วย"
                   />
                 </div>
@@ -459,15 +441,13 @@ const JobRequisitions = () => {
               {/* คุณสมบัติเบื้องต้น */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">คุณสมบัติเบื้องต้น</h3>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="gender">เพศ</Label>
                     <Select
                       value={formData.gender}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, gender: value })
-                      }
+                      onValueChange={(value) => setFormData({ ...formData, gender: value })}
                     >
                       <SelectTrigger id="gender">
                         <SelectValue placeholder="เลือกเพศ" />
@@ -486,9 +466,7 @@ const JobRequisitions = () => {
                       id="maxAge"
                       type="number"
                       value={formData.maxAge}
-                      onChange={(e) =>
-                        setFormData({ ...formData, maxAge: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, maxAge: e.target.value })}
                       placeholder="40"
                     />
                   </div>
@@ -497,9 +475,7 @@ const JobRequisitions = () => {
                     <Label htmlFor="maritalStatus">สถานะสมรส</Label>
                     <Select
                       value={formData.maritalStatus}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, maritalStatus: value })
-                      }
+                      onValueChange={(value) => setFormData({ ...formData, maritalStatus: value })}
                     >
                       <SelectTrigger id="maritalStatus">
                         <SelectValue placeholder="เลือกสถานะ" />
@@ -518,9 +494,7 @@ const JobRequisitions = () => {
                     <Label htmlFor="minEducation">วุฒิการศึกษาขั้นต่ำ</Label>
                     <Select
                       value={formData.minEducation}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, minEducation: value })
-                      }
+                      onValueChange={(value) => setFormData({ ...formData, minEducation: value })}
                     >
                       <SelectTrigger id="minEducation">
                         <SelectValue placeholder="เลือกวุฒิการศึกษา" />
@@ -541,9 +515,7 @@ const JobRequisitions = () => {
                     <Input
                       id="fieldOfStudy"
                       value={formData.fieldOfStudy}
-                      onChange={(e) =>
-                        setFormData({ ...formData, fieldOfStudy: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, fieldOfStudy: e.target.value })}
                       placeholder="เช่น วิศวกรรมคอมพิวเตอร์"
                     />
                   </div>
@@ -556,9 +528,7 @@ const JobRequisitions = () => {
                       id="minExperience"
                       type="number"
                       value={formData.minExperience}
-                      onChange={(e) =>
-                        setFormData({ ...formData, minExperience: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, minExperience: e.target.value })}
                       placeholder="3"
                     />
                   </div>
@@ -568,9 +538,7 @@ const JobRequisitions = () => {
                     <Input
                       id="experienceIn"
                       value={formData.experienceIn}
-                      onChange={(e) =>
-                        setFormData({ ...formData, experienceIn: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, experienceIn: e.target.value })}
                       placeholder="เช่น การพัฒนาซอฟต์แวร์"
                     />
                   </div>
@@ -581,9 +549,7 @@ const JobRequisitions = () => {
                   <Textarea
                     id="otherSkills"
                     value={formData.otherSkills}
-                    onChange={(e) =>
-                      setFormData({ ...formData, otherSkills: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, otherSkills: e.target.value })}
                     placeholder="เช่น ภาษาอังกฤษ, คอมพิวเตอร์, พิมพ์ดีด, มีรถยนต์, ทำงานต่างจังหวัดได้"
                     rows={3}
                   />
@@ -604,9 +570,7 @@ const JobRequisitions = () => {
       <Card>
         <CardHeader>
           <CardTitle>รายการคำขออนุมัติ</CardTitle>
-          <CardDescription>
-            ติดตามสถานะคำขออนุมัติอัตรากำลังทั้งหมด
-          </CardDescription>
+          <CardDescription>ติดตามสถานะคำขออนุมัติอัตรากำลังทั้งหมด</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
