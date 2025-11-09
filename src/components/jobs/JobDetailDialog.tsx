@@ -185,7 +185,7 @@ export function JobDetailDialog({ job, open, onOpenChange, onEdit, onDelete, onV
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             ปิด
           </Button>
-          <Button variant="secondary" onClick={() => navigate('/job-application')}>
+          <Button variant="secondary" onClick={() => navigate('/job-application', { state: { jobTitle: job.title } })}>
             <FileText className="h-4 w-4 mr-2" />
             สมัครงาน
           </Button>

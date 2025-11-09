@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { useCandidates } from "@/contexts/CandidatesContext";
 const JobApplication = () => {
   const { toast } = useToast();
   const { addCandidate } = useCandidates();
+  const location = useLocation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
@@ -42,6 +44,18 @@ const JobApplication = () => {
     "Marketing Manager",
     "Sales Executive",
   ];
+
+  // Set position from navigation state if available
+  useEffect(() => {
+    const state = location.state as { jobTitle?: string } | null;
+    if (state?.jobTitle) {
+      setFormData(prev => ({ ...prev, position: state.jobTitle }));
+      toast({
+        title: "ตำแหน่งงานถูกเลือกแล้ว",
+        description: `คุณกำลังสมัครตำแหน่ง: ${state.jobTitle}`,
+      });
+    }
+  }, [location.state, toast]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
