@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -13,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { MapPin, Briefcase, DollarSign, Users, CheckCircle, XCircle, Clock, Edit, Trash2, UserSearch } from "lucide-react";
+import { MapPin, Briefcase, DollarSign, Users, CheckCircle, XCircle, Clock, Edit, Trash2, UserSearch, FileText } from "lucide-react";
 
 interface JobDetailDialogProps {
   job: {
@@ -47,6 +48,7 @@ interface JobDetailDialogProps {
 }
 
 export function JobDetailDialog({ job, open, onOpenChange, onEdit, onDelete, onViewCandidates }: JobDetailDialogProps) {
+  const navigate = useNavigate();
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   
   if (!job) return null;
@@ -179,9 +181,13 @@ export function JobDetailDialog({ job, open, onOpenChange, onEdit, onDelete, onV
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             ปิด
+          </Button>
+          <Button variant="secondary" onClick={() => navigate('/job-application')}>
+            <FileText className="h-4 w-4 mr-2" />
+            สมัครงาน
           </Button>
           <Button onClick={onViewCandidates}>
             <UserSearch className="h-4 w-4 mr-2" />
