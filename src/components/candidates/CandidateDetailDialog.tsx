@@ -210,18 +210,41 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                 </div>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={onEdit}>
-                <Edit className="h-4 w-4 mr-2" />
-                แก้ไข
-              </Button>
-              <Button variant="destructive" size="sm" onClick={handleDeleteClick}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                ลบ
-              </Button>
-            </div>
           </div>
         </DialogHeader>
+
+        {/* Action Buttons - Moved to top */}
+        <div className="mt-4">
+          <h3 className="text-lg font-semibold mb-4">จัดการผู้สมัคร</h3>
+          <div className="flex gap-3">
+            <Button 
+              variant={candidate.status === 'shortlisted' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={() => handleStatusChange('shortlisted')}
+            >
+              <Star className="h-4 w-4 mr-2" />
+              Shortlist
+            </Button>
+            <Button 
+              variant={candidate.status === 'interested' ? 'default' : 'outline'}
+              className="flex-1"
+              onClick={() => handleStatusChange('interested')}
+            >
+              <Heart className="h-4 w-4 mr-2" />
+              Send to Manager
+            </Button>
+            <Button 
+              variant={candidate.status === 'not_interested' ? 'destructive' : 'outline'}
+              className="flex-1"
+              onClick={() => handleStatusChange('not_interested')}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Not interested
+            </Button>
+          </div>
+        </div>
+
+        <Separator className="my-6" />
 
         <div className="space-y-6 mt-4">
           {/* Contact Information */}
@@ -337,10 +360,16 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
 
           {/* AI Fit Score Breakdown */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">รายละเอียด AI Fit Score</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">AI Fit Score</h3>
+              <div className="text-2xl font-bold text-primary">
+                {candidate.score}%
+                <span className="text-sm text-muted-foreground ml-1">JD Match</span>
+              </div>
+            </div>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm">ทักษะที่ตรงกัน</span>
+                <span className="text-sm">Conformity to Job description (50%)</span>
                 <div className="flex items-center gap-2">
                   <div className="w-48 bg-secondary rounded-full h-2">
                     <div className="bg-primary h-2 rounded-full" style={{ width: '85%' }}></div>
@@ -349,7 +378,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">ประสบการณ์</span>
+                <span className="text-sm">Work experience consistent (20%)</span>
                 <div className="flex items-center gap-2">
                   <div className="w-48 bg-secondary rounded-full h-2">
                     <div className="bg-primary h-2 rounded-full" style={{ width: '92%' }}></div>
@@ -358,12 +387,30 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">การศึกษา</span>
+                <span className="text-sm">Other Skill and abilities (10%)</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-48 bg-secondary rounded-full h-2">
+                    <div className="bg-primary h-2 rounded-full" style={{ width: '88%' }}></div>
+                  </div>
+                  <span className="text-sm font-medium w-12 text-right">88%</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Educational qualification (10%)</span>
                 <div className="flex items-center gap-2">
                   <div className="w-48 bg-secondary rounded-full h-2">
                     <div className="bg-primary h-2 rounded-full" style={{ width: '90%' }}></div>
                   </div>
                   <span className="text-sm font-medium w-12 text-right">90%</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">GPA (10%)</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-48 bg-secondary rounded-full h-2">
+                    <div className="bg-primary h-2 rounded-full" style={{ width: '95%' }}></div>
+                  </div>
+                  <span className="text-sm font-medium w-12 text-right">95%</span>
                 </div>
               </div>
             </div>
@@ -385,14 +432,12 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                 <div className="text-sm text-muted-foreground mb-1">แบบทดสอบส่วนกลาง (HR)</div>
                 <div className="text-3xl font-bold text-primary">
                   {candidate.testScores?.hrTest || "-"}
-                  {candidate.testScores?.hrTest && <span className="text-lg text-muted-foreground">/100</span>}
                 </div>
               </div>
               <div className="p-4 border rounded-lg bg-muted/20">
                 <div className="text-sm text-muted-foreground mb-1">แบบทดสอบเฉพาะแผนก</div>
                 <div className="text-3xl font-bold text-primary">
                   {candidate.testScores?.departmentTest || "-"}
-                  {candidate.testScores?.departmentTest && <span className="text-lg text-muted-foreground">/100</span>}
                 </div>
               </div>
             </div>
@@ -500,40 +545,12 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
           </div>
         </div>
 
-        <Separator className="my-6" />
-
-        {/* Action Buttons */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4">จัดการผู้สมัคร</h3>
-          <div className="flex gap-3">
-            <Button 
-              variant={candidate.status === 'shortlisted' ? 'default' : 'outline'}
-              className="flex-1"
-              onClick={() => handleStatusChange('shortlisted')}
-            >
-              <Star className="h-4 w-4 mr-2" />
-              Shortlist
-            </Button>
-            <Button 
-              variant={candidate.status === 'interested' ? 'default' : 'outline'}
-              className="flex-1"
-              onClick={() => handleStatusChange('interested')}
-            >
-              <Heart className="h-4 w-4 mr-2" />
-              Interested
-            </Button>
-            <Button 
-              variant={candidate.status === 'not_interested' ? 'destructive' : 'outline'}
-              className="flex-1"
-              onClick={() => handleStatusChange('not_interested')}
-            >
-              <X className="h-4 w-4 mr-2" />
-              Not interested
-            </Button>
-          </div>
-        </div>
-
         <DialogFooter className="mt-6">
+          <Button variant="destructive" onClick={handleDeleteClick}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            ลบ
+          </Button>
+          <div className="flex-1" />
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             ปิด
           </Button>
