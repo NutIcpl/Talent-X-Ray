@@ -231,7 +231,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
               onClick={() => handleStatusChange('interested')}
             >
               <Heart className="h-4 w-4 mr-2" />
-              Send to Manager
+              Interested
             </Button>
             <Button 
               variant={candidate.status === 'not_interested' ? 'destructive' : 'outline'}

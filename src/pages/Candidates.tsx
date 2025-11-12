@@ -162,6 +162,7 @@ export default function Candidates() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
+  const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
 
   useEffect(() => {
     const handlePipelineChange = (event: CustomEvent) => {
@@ -305,6 +306,31 @@ export default function Candidates() {
     setSelectedPositions([]);
   };
 
+  const toggleCandidateSelection = (candidateId: number) => {
+    setSelectedCandidates(prev =>
+      prev.includes(candidateId)
+        ? prev.filter(id => id !== candidateId)
+        : [...prev, candidateId]
+    );
+  };
+
+  const handleBulkAction = (action: 'send_to_manager' | 'not_interested') => {
+    const actionMap = {
+      send_to_manager: 'interested',
+      not_interested: 'not_interested'
+    };
+    
+    selectedCandidates.forEach(candidateId => {
+      handleStatusChange(candidateId, actionMap[action]);
+    });
+    
+    setSelectedCandidates([]);
+    toast({
+      title: "อัพเดทเรียบร้อยแล้ว",
+      description: `อัพเดทสถานะของผู้สมัคร ${selectedCandidates.length} คนแล้ว`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -391,6 +417,11 @@ export default function Candidates() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 flex-1">
+                  <Checkbox
+                    checked={selectedCandidates.includes(candidate.id)}
+                    onCheckedChange={() => toggleCandidateSelection(candidate.id)}
+                    className="mt-1"
+                  />
                   <div className="relative">
                     <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-xl shadow-primary">
                       {candidate.score}
@@ -442,6 +473,44 @@ export default function Candidates() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Bulk Action Popup */}
+      {selectedCandidates.length > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5">
+          <Card className="shadow-lg border-2">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium">
+                  เลือก {selectedCandidates.length} คน
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleBulkAction('send_to_manager')}
+                  >
+                    Send to Manager
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleBulkAction('not_interested')}
+                  >
+                    Not Interested
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedCandidates([])}
+                  >
+                    ยกเลิก
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <CandidateDetailDialog
         candidate={selectedCandidate}
