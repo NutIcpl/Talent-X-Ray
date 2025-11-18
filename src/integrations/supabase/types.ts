@@ -14,6 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
+      job_requisitions: {
+        Row: {
+          created_at: string | null
+          date_needed: string
+          department: string
+          experience_in: string | null
+          field_of_study: string | null
+          gender: string | null
+          hiring_type: string
+          id: string
+          job_description_no: string | null
+          justification: string
+          marital_status: string | null
+          max_age: string | null
+          min_education: string | null
+          min_experience: string | null
+          other_skills: string | null
+          position: string
+          quantity: number
+          replacement_date: string | null
+          replacement_for: string | null
+          reports_to: string
+          requested_by: string
+          requisition_number: string
+          status: string
+          temporary_duration: string | null
+          updated_at: string | null
+          work_location: string
+        }
+        Insert: {
+          created_at?: string | null
+          date_needed: string
+          department: string
+          experience_in?: string | null
+          field_of_study?: string | null
+          gender?: string | null
+          hiring_type: string
+          id?: string
+          job_description_no?: string | null
+          justification: string
+          marital_status?: string | null
+          max_age?: string | null
+          min_education?: string | null
+          min_experience?: string | null
+          other_skills?: string | null
+          position: string
+          quantity?: number
+          replacement_date?: string | null
+          replacement_for?: string | null
+          reports_to: string
+          requested_by: string
+          requisition_number: string
+          status?: string
+          temporary_duration?: string | null
+          updated_at?: string | null
+          work_location: string
+        }
+        Update: {
+          created_at?: string | null
+          date_needed?: string
+          department?: string
+          experience_in?: string | null
+          field_of_study?: string | null
+          gender?: string | null
+          hiring_type?: string
+          id?: string
+          job_description_no?: string | null
+          justification?: string
+          marital_status?: string | null
+          max_age?: string | null
+          min_education?: string | null
+          min_experience?: string | null
+          other_skills?: string | null
+          position?: string
+          quantity?: number
+          replacement_date?: string | null
+          replacement_for?: string | null
+          reports_to?: string
+          requested_by?: string
+          requisition_number?: string
+          status?: string
+          temporary_duration?: string | null
+          updated_at?: string | null
+          work_location?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_requisitions_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -40,6 +135,48 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      requisition_approvals: {
+        Row: {
+          action: string
+          approver_id: string
+          comment: string | null
+          created_at: string | null
+          id: string
+          requisition_id: string
+        }
+        Insert: {
+          action: string
+          approver_id: string
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          requisition_id: string
+        }
+        Update: {
+          action?: string
+          approver_id?: string
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          requisition_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requisition_approvals_approver_id_fkey"
+            columns: ["approver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requisition_approvals_requisition_id_fkey"
+            columns: ["requisition_id"]
+            isOneToOne: false
+            referencedRelation: "job_requisitions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -75,6 +212,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_requisition_number: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
