@@ -81,11 +81,13 @@ export function useProfiles() {
       name,
       department,
       roles,
+      status,
     }: {
       userId: string;
       name: string;
       department: string;
       roles: string[];
+      status?: "active" | "inactive";
     }) => {
       // Update profile
       const { error: profileError } = await supabase

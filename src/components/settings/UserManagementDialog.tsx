@@ -9,11 +9,12 @@ import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 const userFormSchema = z.object({
-  name: z.string().min(2, "ชื่อต้องมีอย่างน้อย 2 ตัวอักษร"),
+  firstName: z.string().min(2, "ชื่อต้องมีอย่างน้อย 2 ตัวอักษร"),
+  lastName: z.string().min(2, "นามสกุลต้องมีอย่างน้อย 2 ตัวอักษร"),
   department: z.string().min(1, "กรุณาระบุแผนก"),
   email: z.string().email("อีเมลไม่ถูกต้อง"),
   password: z.string().min(6, "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร").optional(),
-  role: z.string().min(1, "กรุณาเลือกบทบาท"),
+  roles: z.array(z.string()).min(1, "กรุณาเลือกบทบาทอย่างน้อย 1 บทบาท"),
   status: z.enum(["active", "inactive"]),
 });
 
@@ -30,31 +31,39 @@ interface UserManagementDialogProps {
   } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (user: UserFormValues & { id?: string }) => void;
+  onSave: (user: UserFormValues & { id?: string; name: string }) => void;
 }
 
 export function UserManagementDialog({ user, open, onOpenChange, onSave }: UserManagementDialogProps) {
+  // Split name into first and last name
+  const nameParts = user?.name.split(" ") || [];
+  const firstName = nameParts[0] || "";
+  const lastName = nameParts.slice(1).join(" ") || "";
+
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
     defaultValues: user ? {
-      name: user.name,
+      firstName,
+      lastName,
       department: user.department || "",
       email: user.email,
       password: "",
-      role: user.roles[0] || "",
+      roles: user.roles,
       status: user.status,
     } : {
-      name: "",
+      firstName: "",
+      lastName: "",
       department: "",
       email: "",
       password: "",
-      role: "",
+      roles: [],
       status: "active",
     },
   });
 
   const handleSubmit = (data: UserFormValues) => {
-    onSave(user ? { ...data, id: user.id } : data);
+    const fullName = `${data.firstName} ${data.lastName}`.trim();
+    onSave(user ? { ...data, name: fullName, id: user.id } : { ...data, name: fullName });
     form.reset();
     onOpenChange(false);
   };
@@ -68,19 +77,35 @@ export function UserManagementDialog({ user, open, onOpenChange, onSave }: UserM
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ชื่อ</FormLabel>
-                  <FormControl>
-                    <Input placeholder="ชื่อ-นามสกุล" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ชื่อ</FormLabel>
+                    <FormControl>
+                      <Input placeholder="ชื่อ" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>นามสกุล</FormLabel>
+                    <FormControl>
+                      <Input placeholder="นามสกุล" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
@@ -128,24 +153,38 @@ export function UserManagementDialog({ user, open, onOpenChange, onSave }: UserM
 
             <FormField
               control={form.control}
-              name="role"
+              name="roles"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>บทบาท</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="เลือกบทบาท" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="admin">Admin - จัดการทุกอย่าง</SelectItem>
-                      <SelectItem value="hr_manager">HR Manager - จัดการ HR</SelectItem>
-                      <SelectItem value="recruiter">Recruiter - รับสมัครงาน</SelectItem>
-                      <SelectItem value="interviewer">Interviewer - สัมภาษณ์</SelectItem>
-                      <SelectItem value="viewer">Viewer - ดูอย่างเดียว</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>บทบาท (เลือกได้หลายบทบาท)</FormLabel>
+                  <div className="space-y-2">
+                    {[
+                      { value: "admin", label: "Admin - จัดการทุกอย่าง" },
+                      { value: "manager", label: "Manager - จัดการตามสิทธิ์" },
+                      { value: "hr_manager", label: "HR Manager - จัดการ HR" },
+                      { value: "recruiter", label: "Recruiter - รับสมัครงาน" },
+                      { value: "interviewer", label: "Interviewer - สัมภาษณ์" },
+                      { value: "viewer", label: "Viewer - ดูอย่างเดียว" },
+                    ].map((role) => (
+                      <div key={role.value} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={role.value}
+                          checked={field.value?.includes(role.value)}
+                          onChange={(e) => {
+                            const newRoles = e.target.checked
+                              ? [...(field.value || []), role.value]
+                              : (field.value || []).filter((r) => r !== role.value);
+                            field.onChange(newRoles);
+                          }}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <label htmlFor={role.value} className="text-sm">
+                          {role.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
