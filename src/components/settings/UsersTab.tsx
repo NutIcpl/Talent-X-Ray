@@ -34,10 +34,12 @@ import {
 
 const roleNames: Record<string, string> = {
   admin: "Admin",
+  ceo: "CEO",
   manager: "Manager",
   hr_manager: "HR Manager",
   recruiter: "Recruiter",
   interviewer: "Interviewer",
+  candidate: "Candidate",
   viewer: "Viewer",
 };
 
@@ -148,10 +150,12 @@ export function UsersTab() {
               <SelectContent>
                 <SelectItem value="all">ทุกบทบาท</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="ceo">CEO</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
                 <SelectItem value="hr_manager">HR Manager</SelectItem>
                 <SelectItem value="recruiter">Recruiter</SelectItem>
                 <SelectItem value="interviewer">Interviewer</SelectItem>
+                <SelectItem value="candidate">Candidate</SelectItem>
                 <SelectItem value="viewer">Viewer</SelectItem>
               </SelectContent>
             </Select>
