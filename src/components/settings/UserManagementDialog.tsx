@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useEffect } from "react";
 
 const userFormSchema = z.object({
   firstName: z.string().min(2, "ชื่อต้องมีอย่างน้อย 2 ตัวอักษร"),
@@ -35,22 +36,9 @@ interface UserManagementDialogProps {
 }
 
 export function UserManagementDialog({ user, open, onOpenChange, onSave }: UserManagementDialogProps) {
-  // Split name into first and last name
-  const nameParts = user?.name.split(" ") || [];
-  const firstName = nameParts[0] || "";
-  const lastName = nameParts.slice(1).join(" ") || "";
-
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userFormSchema),
-    defaultValues: user ? {
-      firstName,
-      lastName,
-      department: user.department || "",
-      email: user.email,
-      password: "",
-      roles: user.roles,
-      status: user.status,
-    } : {
+    defaultValues: {
       firstName: "",
       lastName: "",
       department: "",
@@ -60,6 +48,38 @@ export function UserManagementDialog({ user, open, onOpenChange, onSave }: UserM
       status: "active",
     },
   });
+
+  // Reset form when dialog opens or user changes
+  useEffect(() => {
+    if (open) {
+      if (user) {
+        // Split name into first and last name
+        const nameParts = user.name.split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+        
+        form.reset({
+          firstName,
+          lastName,
+          department: user.department || "",
+          email: user.email,
+          password: "",
+          roles: user.roles,
+          status: user.status,
+        });
+      } else {
+        form.reset({
+          firstName: "",
+          lastName: "",
+          department: "",
+          email: "",
+          password: "",
+          roles: [],
+          status: "active",
+        });
+      }
+    }
+  }, [open, user, form]);
 
   const handleSubmit = (data: UserFormValues) => {
     const fullName = `${data.firstName} ${data.lastName}`.trim();
@@ -160,10 +180,12 @@ export function UserManagementDialog({ user, open, onOpenChange, onSave }: UserM
                   <div className="space-y-2">
                     {[
                       { value: "admin", label: "Admin - จัดการทุกอย่าง" },
+                      { value: "ceo", label: "CEO - อนุมัติระดับสูง" },
                       { value: "manager", label: "Manager - จัดการตามสิทธิ์" },
                       { value: "hr_manager", label: "HR Manager - จัดการ HR" },
                       { value: "recruiter", label: "Recruiter - รับสมัครงาน" },
                       { value: "interviewer", label: "Interviewer - สัมภาษณ์" },
+                      { value: "candidate", label: "Candidate - ผู้สมัครงาน" },
                       { value: "viewer", label: "Viewer - ดูอย่างเดียว" },
                     ].map((role) => (
                       <div key={role.value} className="flex items-center space-x-2">
