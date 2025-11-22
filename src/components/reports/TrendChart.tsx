@@ -7,7 +7,7 @@ interface TrendChartProps {
 
 export function TrendChart({ data }: TrendChartProps) {
   return (
-    <Card className="p-6">
+    <Card className="p-6" id="trend-chart">
       <h3 className="text-xl font-semibold mb-6">แนวโน้มใบสมัคร</h3>
       
       <ResponsiveContainer width="100%" height={300}>

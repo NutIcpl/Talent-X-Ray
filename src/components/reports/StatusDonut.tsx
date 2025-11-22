@@ -26,7 +26,7 @@ export function StatusDonut({ data }: StatusDonutProps) {
   ].filter(item => item.value > 0);
 
   return (
-    <Card className="p-6">
+    <Card className="p-6" id="status-donut">
       <h3 className="text-xl font-semibold mb-6">สถานะผู้สมัครปัจจุบัน</h3>
       
       <ResponsiveContainer width="100%" height={300}>

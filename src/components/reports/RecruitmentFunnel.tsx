@@ -19,7 +19,7 @@ export function RecruitmentFunnel({ data, onStageClick }: RecruitmentFunnelProps
   const maxValue = data.applicants;
 
   return (
-    <Card className="p-6">
+    <Card className="p-6" id="recruitment-funnel">
       <h3 className="text-xl font-semibold mb-6">Recruitment Funnel</h3>
       
       <div className="space-y-6">

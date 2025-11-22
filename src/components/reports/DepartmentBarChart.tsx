@@ -25,7 +25,7 @@ export function DepartmentBarChart({ positions }: DepartmentBarChartProps) {
   }, [] as Array<{ department: string; applicants: number; interviewed: number; passed: number }>);
 
   return (
-    <Card className="p-6">
+    <Card className="p-6" id="department-bar-chart">
       <h3 className="text-xl font-semibold mb-6">สถิติตามแผนก</h3>
       
       <ResponsiveContainer width="100%" height={300}>

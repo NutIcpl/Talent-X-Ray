@@ -91,17 +91,22 @@ export function useReportsData() {
         hiringRate: { current: 0, mom: 0 },
         screeningPassed: { current: 0, mom: 0 },
         interviewed: { current: 0, mom: 0 },
-        hired: { current: 0, mom: 0 }
+        hired: { current: 0, mom: 0 },
+        vacancyRate: { current: 0, mom: 0 },
+        applicantsPerOpening: { current: 0, mom: 0 }
       };
     }
 
     const totalApplicants = applications.length;
     const openRoles = positions.filter(p => p.status === 'open').length;
+    const totalJobs = positions.length;
     const screeningPassed = applications.filter(a => ['Screening', 'Interview', 'Offer', 'Hired'].includes(a.stage)).length;
     const interviewed = applications.filter(a => ['Interview', 'Offer', 'Hired'].includes(a.stage)).length;
     const hired = applications.filter(a => a.stage === 'Hired').length;
     const offers = applications.filter(a => ['Offer', 'Hired'].includes(a.stage)).length;
     const hiringRate = offers > 0 ? hired / offers : 0;
+    const vacancyRate = totalJobs > 0 ? openRoles / totalJobs : 0;
+    const applicantsPerOpening = openRoles > 0 ? totalApplicants / openRoles : 0;
 
     // Mock MoM data (in real app, compare with last month's data)
     return {
@@ -110,7 +115,9 @@ export function useReportsData() {
       hiringRate: { current: hiringRate, mom: 0.031 },
       screeningPassed: { current: screeningPassed, mom: 0.089 },
       interviewed: { current: interviewed, mom: -0.042 },
-      hired: { current: hired, mom: 0.15 }
+      hired: { current: hired, mom: 0.15 },
+      vacancyRate: { current: vacancyRate, mom: 0.03 },
+      applicantsPerOpening: { current: applicantsPerOpening, mom: 0.08 }
     };
   };
 
@@ -299,6 +306,83 @@ export function useReportsData() {
     });
   };
 
+  // Get yield ratios for heatmap
+  const getYieldRatios = () => {
+    if (!positions || !applications || !interviews) return [];
+
+    return positions.map(pos => {
+      const posApps = applications.filter(a => a.position_id === pos.id);
+      const total = posApps.length;
+      const screening = posApps.filter(a => ['Screening', 'Interview', 'Offer', 'Hired'].includes(a.stage)).length;
+      const interview = posApps.filter(a => ['Interview', 'Offer', 'Hired'].includes(a.stage)).length;
+      const offer = posApps.filter(a => ['Offer', 'Hired'].includes(a.stage)).length;
+      const hired = posApps.filter(a => a.stage === 'Hired').length;
+
+      return {
+        position: pos.title,
+        department: pos.department,
+        applyToScreen: total > 0 ? screening / total : 0,
+        screenToInterview: screening > 0 ? interview / screening : 0,
+        interviewToOffer: interview > 0 ? offer / interview : 0,
+        offerToHire: offer > 0 ? hired / offer : 0
+      };
+    });
+  };
+
+  // Get turnover data (mock for now)
+  const getTurnoverData = () => {
+    const departments = ['วิศวกรรม', 'ผลิตภัณฑ์', 'ออกแบบ', 'การตลาด'];
+    return {
+      firstMonth: {
+        trend: Array.from({ length: 12 }, (_, i) => ({
+          period: `เดือน ${i + 1}`,
+          rate: 0.05 + Math.random() * 0.1
+        })),
+        byDepartment: departments.map(dept => ({
+          department: dept,
+          rate: 0.05 + Math.random() * 0.1
+        }))
+      },
+      firstYear: {
+        trend: Array.from({ length: 12 }, (_, i) => ({
+          period: `เดือน ${i + 1}`,
+          rate: 0.15 + Math.random() * 0.15
+        })),
+        byDepartment: departments.map(dept => ({
+          department: dept,
+          rate: 0.15 + Math.random() * 0.15
+        }))
+      }
+    };
+  };
+
+  // Get satisfaction data (mock for now)
+  const getSatisfactionData = () => {
+    return {
+      hiringManager: 4.2,
+      candidateJob: 4.5,
+      hiringManagerTrend: Array.from({ length: 12 }, (_, i) => ({
+        period: `เดือน ${i + 1}`,
+        score: 3.8 + Math.random() * 0.8
+      })),
+      candidateJobTrend: Array.from({ length: 12 }, (_, i) => ({
+        period: `เดือน ${i + 1}`,
+        score: 4.0 + Math.random() * 0.8
+      }))
+    };
+  };
+
+  // Get cost breakdown (mock for now)
+  const getCostBreakdown = () => {
+    return {
+      onboarding: 15000,
+      training: 25000,
+      supervision: 10000,
+      otj: 20000,
+      laborProportion: 30000
+    };
+  };
+
   return {
     isLoading,
     headlineStats: getHeadlineStats(),
@@ -308,6 +392,10 @@ export function useReportsData() {
     positions: getPositionsForTable(),
     sourcesCost: getSourcesCost(),
     candidates: getCandidatesForDisplay(),
-    trendData: getTrendData()
+    trendData: getTrendData(),
+    yieldRatios: getYieldRatios(),
+    turnoverData: getTurnoverData(),
+    satisfactionData: getSatisfactionData(),
+    costBreakdown: getCostBreakdown()
   };
 }
