@@ -6,7 +6,9 @@ export const getHeadlineStats = (): HeadlineStats => ({
   hiringRate: { current: 0.85, mom: 0.031 },
   screeningPassed: { current: 260, mom: 0.089 },
   interviewed: { current: 155, mom: -0.042 },
-  hired: { current: 55, mom: 0.15 }
+  hired: { current: 55, mom: 0.15 },
+  vacancyRate: { current: 0.15, mom: 0.03 },
+  applicantsPerOpening: { current: 27.4, mom: 0.08 }
 });
 
 export const getEfficiency = (): Efficiency => ({
