@@ -68,7 +68,7 @@ const JobRequisitions = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.department || !formData.position || !formData.date_needed || !formData.work_location || !formData.reports_to || !formData.justification) {
+    if (!formData.department || !formData.position || !formData.date_needed || !formData.work_location || !formData.reports_to || !formData.justification || !formData.gender || !formData.min_education) {
       toast({ title: "กรุณากรอกข้อมูลให้ครบถ้วน", variant: "destructive" });
       return;
     }
@@ -104,8 +104,9 @@ const JobRequisitions = () => {
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader><DialogTitle>สร้างคำขออนุมัติการจ้างงาน</DialogTitle><DialogDescription>กรอกข้อมูลเพื่อขออนุมัติเปิดตำแหน่งงานใหม่</DialogDescription></DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+                {/* ข้อมูลทั่วไป */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold border-b pb-2">ข้อมูลทั่วไป</h3>
+                  <h3 className="text-lg font-semibold border-b pb-2">1. ข้อมูลทั่วไป</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2"><Label>ฝ่าย/แผนก *</Label><Select value={formData.department} onValueChange={(v) => setFormData({...formData, department: v})}><SelectTrigger><SelectValue placeholder="เลือกฝ่าย/แผนก" /></SelectTrigger><SelectContent>{departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>ตำแหน่งงาน *</Label><Input value={formData.position} onChange={(e) => setFormData({...formData, position: e.target.value})} /></div>
@@ -115,9 +116,101 @@ const JobRequisitions = () => {
                     <div className="space-y-2"><Label>สถานที่ *</Label><Select value={formData.work_location} onValueChange={(v) => setFormData({...formData, work_location: v})}><SelectTrigger><SelectValue placeholder="เลือกสถานที่" /></SelectTrigger><SelectContent>{workLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>รายงานต่อ *</Label><Input placeholder="ชื่อหัวหน้างานโดยตรง" value={formData.reports_to} onChange={(e) => setFormData({...formData, reports_to: e.target.value})} /></div>
                   </div>
-                  <div className="space-y-2"><Label>เหตุผล *</Label><Textarea value={formData.justification} onChange={(e) => setFormData({...formData, justification: e.target.value})} rows={4} /></div>
                 </div>
-                <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setOpen(false)}>ยกเลิก</Button><Button type="submit" disabled={createRequisition.isPending}>บันทึกคำขอ</Button></div>
+
+                {/* รายละเอียดการจ้างงาน */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">2. รายละเอียดการจ้างงาน</h3>
+                  <div className="space-y-2">
+                    <Label>ประเภท/เหตุผลการจ้าง *</Label>
+                    <Select value={formData.hiring_type} onValueChange={(v) => setFormData({...formData, hiring_type: v as "replacement" | "permanent" | "temporary"})}>
+                      <SelectTrigger><SelectValue placeholder="เลือกประเภทการจ้าง" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="permanent">ตำแหน่งประจำที่ขอเพิ่ม</SelectItem>
+                        <SelectItem value="replacement">ทดแทนตำแหน่ง</SelectItem>
+                        <SelectItem value="temporary">พนักงานชั่วคราว</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>เหตุผลในการขอเพิ่ม *</Label>
+                    <Textarea 
+                      placeholder="ระบุเหตุผลในการขอเพิ่มตำแหน่งงาน"
+                      value={formData.justification} 
+                      onChange={(e) => setFormData({...formData, justification: e.target.value})} 
+                      rows={4} 
+                    />
+                  </div>
+                </div>
+
+                {/* คุณสมบัติและหน้าที่ */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold border-b pb-2">3. คุณสมบัติและหน้าที่</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>เพศ *</Label>
+                      <Select value={formData.gender} onValueChange={(v) => setFormData({...formData, gender: v})}>
+                        <SelectTrigger><SelectValue placeholder="เลือกเพศ" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ไม่ระบุ">ไม่ระบุ</SelectItem>
+                          <SelectItem value="ชาย">ชาय</SelectItem>
+                          <SelectItem value="หญิง">หญิง</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>วุฒิการศึกษาขั้นต่ำ *</Label>
+                      <Select value={formData.min_education} onValueChange={(v) => setFormData({...formData, min_education: v})}>
+                        <SelectTrigger><SelectValue placeholder="เลือกวุฒิการศึกษา" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ปริญญาตรี">ปริญญาตรี</SelectItem>
+                          <SelectItem value="ปริญญาโท">ปริญญาโท</SelectItem>
+                          <SelectItem value="ปริญญาเอก">ปริญญาเอก</SelectItem>
+                          <SelectItem value="ปวส.">ปวส.</SelectItem>
+                          <SelectItem value="มัธยมศึกษา">มัธยมศึกษา</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>สาขาวิชา</Label>
+                      <Input 
+                        placeholder="เช่น วิทยาการคอมพิวเตอร์, บริหารธุรกิจ, วิศวกรรมศาสตร์" 
+                        value={formData.field_of_study} 
+                        onChange={(e) => setFormData({...formData, field_of_study: e.target.value})} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>ประสบการณ์ขั้นต่ำ</Label>
+                      <Input 
+                        placeholder="เช่น การตลาดดิจิทัล, การพัฒนาซอฟต์แวร์" 
+                        value={formData.experience_in} 
+                        onChange={(e) => setFormData({...formData, experience_in: e.target.value})} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>ประสบการณ์ขั้นต่ำ</Label>
+                      <Input 
+                        placeholder="เช่น 1 ปี, 5 ปี" 
+                        value={formData.min_experience} 
+                        onChange={(e) => setFormData({...formData, min_experience: e.target.value})} 
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>ความสามารถ / ความชำนาญอย่างอื่น</Label>
+                    <Textarea 
+                      placeholder="ภาษาต่างประเทศ คอมพิวเตอร์ ขับรถยนต์ได้ไปอนุญาตชั้นขี้ ทำงานต่างจังหวัดได้ *ลฯ"
+                      value={formData.other_skills} 
+                      onChange={(e) => setFormData({...formData, other_skills: e.target.value})} 
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>ยกเลิก</Button>
+                  <Button type="submit" disabled={createRequisition.isPending}>ส่งคำขออนุมัติ</Button>
+                </div>
               </form>
             </DialogContent>
           </Dialog>
