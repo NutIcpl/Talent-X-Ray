@@ -39,11 +39,32 @@ const JobRequisitions = () => {
     department: "", position: "", quantity: "1", date_needed: "", work_location: "",
     reports_to: "", hiring_type: "permanent" as "replacement" | "permanent" | "temporary",
     replacement_for: "", replacement_date: "", temporary_duration: "", justification: "",
-    job_description_no: "", gender: "", max_age: "", min_experience: "", min_education: "",
+    job_description_no: "", job_grade: "", gender: "", max_age: "", min_experience: "", min_education: "",
     field_of_study: "", other_skills: "", marital_status: "", experience_in: "",
   });
 
   const departments = ["Engineering", "Marketing", "Sales", "Human Resources", "Finance", "Operations"];
+  
+  const jobGrades = [
+    "JG 1.1 Staff",
+    "JG 1.2 Senior Staff",
+    "JG 2.1 Supervisor",
+    "JG 2.1 Specialist",
+    "JG 2.2 Assistant Manager",
+    "JG 2.2 Senior Specialist",
+    "JG 3.1 Manager",
+    "JG 3.1 Lead Specialist",
+    "JG 3.2 Senior Manager",
+    "JG 3.2 Lead Specialist",
+    "JG 4.1 Assistant Vice President",
+    "JG 4.1 Lead Specialist",
+    "JG 4.2 Vice President"
+  ];
+
+  const workLocations = [
+    "สำนักงานใหญ่ สุรวงศ์",
+    "โรงงานนครปฐม"
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +74,7 @@ const JobRequisitions = () => {
     }
     await createRequisition.mutateAsync({ ...formData, quantity: parseInt(formData.quantity) });
     setOpen(false);
-    setFormData({ department: "", position: "", quantity: "1", date_needed: "", work_location: "", reports_to: "", hiring_type: "permanent", replacement_for: "", replacement_date: "", temporary_duration: "", justification: "", job_description_no: "", gender: "", max_age: "", min_experience: "", min_education: "", field_of_study: "", other_skills: "", marital_status: "", experience_in: "" });
+    setFormData({ department: "", position: "", quantity: "1", date_needed: "", work_location: "", reports_to: "", hiring_type: "permanent", replacement_for: "", replacement_date: "", temporary_duration: "", justification: "", job_description_no: "", job_grade: "", gender: "", max_age: "", min_experience: "", min_education: "", field_of_study: "", other_skills: "", marital_status: "", experience_in: "" });
   };
 
   const getStatusBadge = (status: string) => {
@@ -88,10 +109,11 @@ const JobRequisitions = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2"><Label>ฝ่าย/แผนก *</Label><Select value={formData.department} onValueChange={(v) => setFormData({...formData, department: v})}><SelectTrigger><SelectValue placeholder="เลือกฝ่าย/แผนก" /></SelectTrigger><SelectContent>{departments.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>ตำแหน่งงาน *</Label><Input value={formData.position} onChange={(e) => setFormData({...formData, position: e.target.value})} /></div>
+                    <div className="space-y-2"><Label>Job Grade</Label><Select value={formData.job_grade} onValueChange={(v) => setFormData({...formData, job_grade: v})}><SelectTrigger><SelectValue placeholder="เลือก Job Grade" /></SelectTrigger><SelectContent>{jobGrades.map(jg => <SelectItem key={jg} value={jg}>{jg}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>จำนวน *</Label><Input type="number" min="1" value={formData.quantity} onChange={(e) => setFormData({...formData, quantity: e.target.value})} /></div>
                     <div className="space-y-2"><Label>วันที่ต้องการ *</Label><Input type="date" value={formData.date_needed} onChange={(e) => setFormData({...formData, date_needed: e.target.value})} /></div>
-                    <div className="space-y-2"><Label>สถานที่ *</Label><Input value={formData.work_location} onChange={(e) => setFormData({...formData, work_location: e.target.value})} /></div>
-                    <div className="space-y-2"><Label>รายงานต่อ *</Label><Input value={formData.reports_to} onChange={(e) => setFormData({...formData, reports_to: e.target.value})} /></div>
+                    <div className="space-y-2"><Label>สถานที่ *</Label><Select value={formData.work_location} onValueChange={(v) => setFormData({...formData, work_location: v})}><SelectTrigger><SelectValue placeholder="เลือกสถานที่" /></SelectTrigger><SelectContent>{workLocations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label>รายงานต่อ *</Label><Input placeholder="ชื่อหัวหน้างานโดยตรง" value={formData.reports_to} onChange={(e) => setFormData({...formData, reports_to: e.target.value})} /></div>
                   </div>
                   <div className="space-y-2"><Label>เหตุผล *</Label><Textarea value={formData.justification} onChange={(e) => setFormData({...formData, justification: e.target.value})} rows={4} /></div>
                 </div>

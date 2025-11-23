@@ -17,6 +17,7 @@ export interface JobRequisition {
   temporary_duration?: string;
   justification: string;
   job_description_no?: string;
+  job_grade?: string;
   gender?: string;
   max_age?: string;
   min_experience?: string;
