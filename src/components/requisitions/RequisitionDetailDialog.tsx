@@ -9,6 +9,8 @@ import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface RequisitionDetailDialogProps {
   requisition: JobRequisition | null;
@@ -24,6 +26,7 @@ export const RequisitionDetailDialog = ({
   canApprove = false,
 }: RequisitionDetailDialogProps) => {
   const [comment, setComment] = useState("");
+  const { toast } = useToast();
   const { approvals, addApproval } = useRequisitionApprovals(requisition?.id || "");
 
   if (!requisition) return null;
@@ -74,6 +77,33 @@ export const RequisitionDetailDialog = ({
       action: "approved",
       comment: comment || undefined,
     });
+    
+    // Check if user is CEO and create job position automatically
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      const userRoles = roles?.map(r => r.role) || [];
+      
+      if (userRoles.includes("ceo") || userRoles.includes("admin")) {
+        // Create job position automatically
+        const { error: jobError } = await supabase.from("job_positions").insert({
+          title: requisition.position,
+          department: requisition.department,
+          description: requisition.justification,
+          required_count: requisition.quantity,
+          start_date: requisition.date_needed,
+          status: "open"
+        });
+        
+        if (!jobError) {
+          toast({
+            title: "สำเร็จ",
+            description: "สร้างตำแหน่งงานใหม่อัตโนมัติแล้ว",
+          });
+        }
+      }
+    }
+    
     setComment("");
   };
 
@@ -121,6 +151,12 @@ export const RequisitionDetailDialog = ({
                 <p className="text-sm text-muted-foreground">ตำแหน่ง</p>
                 <p className="font-medium">{requisition.position}</p>
               </div>
+              {requisition.job_grade && (
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Job Grade</p>
+                  <p className="font-medium">{requisition.job_grade}</p>
+                </div>
+              )}
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">จำนวน</p>
                 <p className="font-medium">{requisition.quantity} คน</p>

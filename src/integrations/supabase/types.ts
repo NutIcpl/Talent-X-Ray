@@ -199,6 +199,7 @@ export type Database = {
           hiring_type: string
           id: string
           job_description_no: string | null
+          job_grade: string | null
           justification: string
           marital_status: string | null
           max_age: string | null
@@ -227,6 +228,7 @@ export type Database = {
           hiring_type: string
           id?: string
           job_description_no?: string | null
+          job_grade?: string | null
           justification: string
           marital_status?: string | null
           max_age?: string | null
@@ -255,6 +257,7 @@ export type Database = {
           hiring_type?: string
           id?: string
           job_description_no?: string | null
+          job_grade?: string | null
           justification?: string
           marital_status?: string | null
           max_age?: string | null
