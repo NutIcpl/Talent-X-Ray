@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Filter, Star, UserPlus } from "lucide-react";
 import { CandidateDetailDialog } from "@/components/candidates/CandidateDetailDialog";
 import { CandidateFormDialog } from "@/components/candidates/CandidateFormDialog";
+import { SendToManagerDialog } from "@/components/candidates/SendToManagerDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useCandidates, Candidate } from "@/contexts/CandidatesContext";
@@ -163,6 +164,7 @@ export default function Candidates() {
   const [activeTab, setActiveTab] = useState("all");
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
+  const [isSendToManagerOpen, setIsSendToManagerOpen] = useState(false);
 
   useEffect(() => {
     const handlePipelineChange = (event: CustomEvent) => {
@@ -315,6 +317,11 @@ export default function Candidates() {
   };
 
   const handleBulkAction = (action: 'send_to_manager' | 'not_interested') => {
+    if (action === 'send_to_manager') {
+      setIsSendToManagerOpen(true);
+      return;
+    }
+
     const actionMap = {
       send_to_manager: 'interested',
       not_interested: 'not_interested'
@@ -528,6 +535,25 @@ export default function Candidates() {
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         onSave={handleSave}
+      />
+
+      <SendToManagerDialog
+        open={isSendToManagerOpen}
+        onOpenChange={setIsSendToManagerOpen}
+        candidates={selectedCandidates.map(id => {
+          const candidate = candidates.find(c => c.id === id);
+          return {
+            id,
+            name: candidate?.name || '',
+            position: candidate?.position || ''
+          };
+        })}
+        onSent={() => {
+          selectedCandidates.forEach(candidateId => {
+            handleStatusChange(candidateId, 'interested');
+          });
+          setSelectedCandidates([]);
+        }}
       />
     </div>
   );
