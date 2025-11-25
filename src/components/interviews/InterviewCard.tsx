@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Clock, MapPin, Users, Video } from "lucide-react";
 import { Interview } from "./InterviewFormDialog";
+import { addSparkleEffect } from "@/lib/sparkle";
 
 interface InterviewCardProps {
   interview: Interview;
@@ -12,7 +13,10 @@ export function InterviewCard({ interview, onClick }: InterviewCardProps) {
   return (
     <div
       className="flex items-center justify-between p-4 rounded-xl bg-card hover:shadow-md transition-all group border border-border/50 cursor-pointer glow-on-hover"
-      onClick={() => onClick(interview)}
+      onClick={(e) => {
+        addSparkleEffect(e);
+        onClick(interview);
+      }}
     >
       <div className="flex items-center gap-4">
         {interview.status === "completed" && interview.score ? (
@@ -60,6 +64,7 @@ export function InterviewCard({ interview, onClick }: InterviewCardProps) {
               className="shadow-sm hover:shadow-glow transition-all hover:scale-105"
               onClick={(e) => {
                 e.stopPropagation();
+                addSparkleEffect(e);
               }}
             >
               เข้าร่วม

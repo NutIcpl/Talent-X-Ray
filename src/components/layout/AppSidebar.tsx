@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { addSparkleEffect } from "@/lib/sparkle";
 
 const menuItems = [
   { title: "Home", url: "/", icon: LayoutDashboard },
@@ -27,26 +28,33 @@ export function AppSidebar() {
   const { open } = useSidebar();
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarContent>
+    <Sidebar collapsible="icon" className="border-r border-border/50">
+      <SidebarContent className="bg-gradient-to-b from-background to-muted/20">
         <SidebarGroup>
-          <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4">
+            Main Menu
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1 px-2">
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
+                      onClick={addSparkleEffect}
                       className={({ isActive }) =>
                         isActive
-                          ? "bg-primary/10 text-primary font-medium"
-                          : "hover:bg-accent"
+                          ? "flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gradient-to-r from-primary/20 to-secondary/20 text-primary font-medium border border-primary/30 shadow-accent transition-all duration-300 hover:scale-105 hover:shadow-hover group"
+                          : "flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gradient-to-r hover:from-accent/20 hover:to-accent-vibrant/20 hover:border hover:border-accent/30 transition-all duration-300 hover:scale-105 hover:shadow-sm group"
                       }
                     >
-                      <item.icon className="h-4 w-4" />
-                      {open && <span>{item.title}</span>}
+                      <item.icon className="h-5 w-5 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                      {open && (
+                        <span className="transition-all duration-300 group-hover:translate-x-1">
+                          {item.title}
+                        </span>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
