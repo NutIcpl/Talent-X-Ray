@@ -57,29 +57,111 @@ async function getAccessToken(): Promise<string> {
 }
 
 async function sendEmail(accessToken: string, emailData: EmailRequest, senderEmail: string) {
-  const candidatesList = emailData.candidates
-    .map((c) => `- ${c.name} (${c.position})`)
-    .join('\n');
+  const candidatesTableRows = emailData.candidates
+    .map((c, index) => `
+      <tr style="background-color: ${index % 2 === 0 ? '#f9fafb' : '#ffffff'};">
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${index + 1}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${c.name}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${c.position}</td>
+      </tr>
+    `)
+    .join('');
 
-  const emailBody = `เรียน ${emailData.toName} (${emailData.department})
-
-นำส่ง Resume ของผู้สมัครตำแหน่ง ${emailData.positions} และได้โทร Pre Screen เบื้องต้นแล้ว รบกวนพิจารณา Resume ให้ภายในวันพฤหัสบดี
-
-รายชื่อผู้สมัคร:
-${candidatesList}
-
-${emailData.candidates.length > 0 && emailData.candidates[0].resume_url ? 'Resume files ได้แนบไฟล์มาด้วยแล้วค่ะ' : ''}
-
-คลิกที่ลิงก์ด้านล่างเพื่อแจ้งผลพิจารณา:
-${Deno.env.get('VITE_SUPABASE_URL') || 'https://your-domain.com'}/candidates
-
-ขอบคุณค่ะ`;
+  const emailBody = `
+    <!DOCTYPE html>
+    <html lang="th">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
+                    📋 Resume ผู้สมัครงาน
+                  </h1>
+                </td>
+              </tr>
+              
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px 30px;">
+                  <p style="margin: 0 0 20px 0; font-size: 16px; color: #374151; line-height: 1.6;">
+                    เรียน <strong style="color: #059669;">${emailData.toName}</strong> (${emailData.department})
+                  </p>
+                  
+                  <p style="margin: 0 0 30px 0; font-size: 15px; color: #6b7280; line-height: 1.8;">
+                    นำส่ง Resume ของผู้สมัครตำแหน่ง <strong style="color: #059669;">${emailData.positions}</strong> 
+                    และได้โทร Pre Screen เบื้องต้นแล้ว รบกวนพิจารณา Resume ให้ภายในวันพฤหัสบดี
+                  </p>
+                  
+                  <!-- Candidates Table -->
+                  <h2 style="margin: 0 0 20px 0; font-size: 18px; color: #111827; font-weight: 600;">
+                    รายชื่อผู้สมัคร
+                  </h2>
+                  
+                  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 30px;">
+                    <thead>
+                      <tr style="background-color: #059669;">
+                        <th style="padding: 14px; color: #ffffff; font-weight: 600; text-align: center; width: 60px;">ลำดับ</th>
+                        <th style="padding: 14px; color: #ffffff; font-weight: 600; text-align: left;">ชื่อ-นามสกุล</th>
+                        <th style="padding: 14px; color: #ffffff; font-weight: 600; text-align: left;">ตำแหน่ง</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${candidatesTableRows}
+                    </tbody>
+                  </table>
+                  
+                  ${emailData.candidates.length > 0 && emailData.candidates[0].resume_url ? 
+                    '<p style="margin: 0 0 30px 0; padding: 16px; background-color: #f0fdf4; border-left: 4px solid #10b981; border-radius: 6px; font-size: 14px; color: #065f46;">✅ Resume files ได้แนบไฟล์มาด้วยแล้วค่ะ</p>' 
+                    : ''
+                  }
+                  
+                  <!-- Action Button -->
+                  <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                    <tr>
+                      <td align="center">
+                        <a href="${Deno.env.get('VITE_SUPABASE_URL') || 'https://your-domain.com'}/candidates" 
+                           style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); transition: transform 0.2s;">
+                          🎯 แจ้งผลพิจารณา
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                  <p style="margin: 30px 0 0 0; font-size: 15px; color: #374151; line-height: 1.6;">
+                    ขอบคุณค่ะ
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f9fafb; padding: 20px 30px; border-top: 1px solid #e5e7eb;">
+                  <p style="margin: 0; font-size: 13px; color: #9ca3af; text-align: center;">
+                    ระบบจัดการสรรหาบุคลากร | HR Recruitment System
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
 
   const message: any = {
     message: {
       subject: `Resume ผู้สมัครตำแหน่ง ${emailData.positions} - รอพิจารณา`,
       body: {
-        contentType: 'Text',
+        contentType: 'HTML',
         content: emailBody,
       },
       toRecipients: [
