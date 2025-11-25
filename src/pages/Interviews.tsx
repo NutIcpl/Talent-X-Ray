@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Plus, XCircle, AlertCircle } from "lucide-react";
 import { InterviewFormDialog, Interview } from "@/components/interviews/InterviewFormDialog";
 import { PendingScheduleBox } from "@/components/interviews/PendingScheduleBox";
 import { StatusBox } from "@/components/interviews/StatusBox";
@@ -210,59 +210,78 @@ export default function Interviews() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2 bg-gradient-luxury bg-clip-text text-transparent animate-float">
-            การสัมภาษณ์
-          </h1>
-          <p className="text-muted-foreground">
-            จัดการและติดตามการสัมภาษณ์ทั้งหมด
-          </p>
+          <h1 className="text-3xl font-bold bg-gradient-luxury bg-clip-text text-transparent">การสัมภาษณ์</h1>
+          <p className="text-muted-foreground mt-1">จัดการตารางสัมภาษณ์และติดตามสถานะ</p>
         </div>
         <Button 
-          className="shadow-glow hover:shadow-hover hover:scale-105 transition-all"
           onClick={handleNewInterview}
+          className="shadow-sm hover:shadow-glow transition-all hover:scale-105"
         >
-          <CalendarIcon className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4 mr-2" />
           นัดสัมภาษณ์ใหม่
         </Button>
       </div>
 
-      {/* Status Boxes */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <PendingScheduleBox
+      {/* Compact Status Boxes */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <PendingScheduleBox 
           candidates={pendingCandidates}
-          onSchedule={handleSchedule}
           bookedSlots={bookedSlots}
+          onSchedule={handleSchedule}
+          compact
         />
-        <StatusBox
+        <StatusBox 
           title="ไม่สนใจ"
           candidates={notInterestedCandidates}
-          type="not_interested"
+          icon={XCircle}
+          colorClass="text-orange-500"
+          bgClass="bg-orange-500/10"
+          compact
         />
-        <StatusBox
+        <StatusBox 
           title="ปฏิเสธการสัมภาษณ์"
           candidates={rejectedCandidates}
-          type="rejected"
+          icon={AlertCircle}
+          colorClass="text-destructive"
+          bgClass="bg-destructive/10"
+          compact
         />
       </div>
 
-      {/* Interview Sections */}
+      {/* Interview Sections - Clear Separation */}
       <div className="space-y-8">
-        <InterviewSection
-          title="First Interview"
-          interviews={firstInterviews}
-          onInterviewClick={handleInterviewClick}
-          gradientClass="from-blue-500/5 to-transparent"
-        />
+        <div className="border-t-4 border-primary/30 pt-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-8 w-1 bg-gradient-to-b from-primary to-primary-glow rounded-full" />
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-vibrant bg-clip-text text-transparent">
+              First Interview
+            </h2>
+          </div>
+          <InterviewSection 
+            title="First Interview"
+            interviews={firstInterviews}
+            onInterviewClick={handleInterviewClick}
+            gradientClass="from-primary/5 to-transparent"
+          />
+        </div>
         
-        <InterviewSection
-          title="Final Interview"
-          interviews={finalInterviews}
-          onInterviewClick={handleInterviewClick}
-          gradientClass="from-purple-500/5 to-transparent"
-        />
+        <div className="border-t-4 border-secondary/30 pt-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-8 w-1 bg-gradient-to-b from-secondary to-secondary-glow rounded-full" />
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-secondary to-secondary-glow bg-clip-text text-transparent">
+              Final Interview
+            </h2>
+          </div>
+          <InterviewSection 
+            title="Final Interview"
+            interviews={finalInterviews}
+            onInterviewClick={handleInterviewClick}
+            gradientClass="from-secondary/5 to-transparent"
+          />
+        </div>
       </div>
 
       <InterviewFormDialog

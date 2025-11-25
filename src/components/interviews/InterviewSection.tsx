@@ -30,11 +30,6 @@ export function InterviewSection({
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold bg-gradient-luxury bg-clip-text text-transparent flex items-center gap-2">
-        <div className="h-1 w-12 bg-gradient-luxury rounded-full" />
-        {title}
-      </h2>
-
       <Tabs defaultValue="list" className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="list" className="flex items-center gap-2">
