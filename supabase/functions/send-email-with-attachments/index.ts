@@ -127,9 +127,9 @@ async function sendEmail(accessToken: string, emailData: EmailRequest, senderEma
                   <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
                     <tr>
                       <td align="center">
-                        <a href="${Deno.env.get('VITE_SUPABASE_URL') || 'https://your-domain.com'}/candidates" 
+                        <a href="https://core-fit.lovable.app" 
                            style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); transition: transform 0.2s;">
-                          🎯 แจ้งผลพิจารณา
+                          แจ้งผลพิจารณา
                         </a>
                       </td>
                     </tr>
