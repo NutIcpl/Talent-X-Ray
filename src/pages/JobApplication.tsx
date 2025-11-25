@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Upload, FileText, Plus, User, X } from "lucide-react";
+import { Upload, FileText, Plus, User, X, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCandidates } from "@/contexts/CandidatesContext";
 import PrivacyPolicyDialog from "@/components/PrivacyPolicyDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 const JobApplication = () => {
   const { toast } = useToast();
@@ -20,6 +21,7 @@ const JobApplication = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
+  const [isParsing, setIsParsing] = useState(false);
   const [languages, setLanguages] = useState<Array<{ language: string; level: string }>>([
     { language: "", level: "good" }
   ]);
@@ -102,6 +104,92 @@ const JobApplication = () => {
     const updated = [...languages];
     updated[index][field] = value;
     setLanguages(updated);
+  };
+
+  const parseResumeWithAI = async () => {
+    if (!selectedFile) {
+      toast({
+        title: "ไม่พบไฟล์",
+        description: "กรุณาอัปโหลดไฟล์ Resume ก่อน",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedFile.type !== 'application/pdf') {
+      toast({
+        title: "รองรับเฉพาะไฟล์ PDF",
+        description: "กรุณาอัปโหลดไฟล์ PDF เท่านั้น",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsParsing(true);
+
+    try {
+      // Read PDF file as text (simplified - in production you'd use a proper PDF parser)
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const text = e.target?.result as string;
+        
+        // Call edge function to parse resume
+        const { data, error } = await supabase.functions.invoke('parse-resume', {
+          body: { resumeText: text }
+        });
+
+        if (error) {
+          console.error('Error parsing resume:', error);
+          toast({
+            title: "เกิดข้อผิดพลาด",
+            description: "ไม่สามารถ parse Resume ได้ กรุณาลองอีกครั้ง",
+            variant: "destructive",
+          });
+          setIsParsing(false);
+          return;
+        }
+
+        if (data?.success && data?.data) {
+          const parsed = data.data;
+          
+          // Update form with parsed data
+          setFormData(prev => ({
+            ...prev,
+            fullName: parsed.name || prev.fullName,
+            email: parsed.email || prev.email,
+            phone: parsed.phone || prev.phone,
+            position: parsed.position || prev.position,
+            coverLetter: parsed.experience || prev.coverLetter,
+          }));
+
+          toast({
+            title: "Parse สำเร็จ!",
+            description: "ข้อมูลจาก Resume ถูกกรอกในฟอร์มแล้ว กรุณาตรวจสอบความถูกต้อง",
+          });
+        }
+
+        setIsParsing(false);
+      };
+
+      reader.onerror = () => {
+        toast({
+          title: "เกิดข้อผิดพลาด",
+          description: "ไม่สามารถอ่านไฟล์ได้",
+          variant: "destructive",
+        });
+        setIsParsing(false);
+      };
+
+      reader.readAsText(selectedFile);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: "ไม่สามารถ parse Resume ได้",
+        variant: "destructive",
+      });
+      setIsParsing(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -263,7 +351,7 @@ const JobApplication = () => {
                   <Label htmlFor="resume">
                     แนบไฟล์ CV / Attached CV <span className="text-destructive">*</span>
                     <span className="text-destructive text-xs ml-2">
-                      (เฉพาะไฟล์ word, pdf หรือ powerpoint เท่านั้น)
+                      (เฉพาะไฟล์ PDF สำหรับการ parse ด้วย AI)
                     </span>
                   </Label>
                   <div className="flex gap-2">
@@ -276,7 +364,7 @@ const JobApplication = () => {
                     <input
                       id="resume"
                       type="file"
-                      accept=".pdf,.doc,.docx,.ppt,.pptx"
+                      accept=".pdf"
                       onChange={handleFileChange}
                       className="hidden"
                     />
@@ -285,7 +373,32 @@ const JobApplication = () => {
                         <span>Browse</span>
                       </Button>
                     </label>
+                    {selectedFile && (
+                      <Button 
+                        type="button" 
+                        onClick={parseResumeWithAI}
+                        disabled={isParsing}
+                        className="gap-2"
+                      >
+                        {isParsing ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            กำลัง Parse...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4" />
+                            Parse Resume with AI
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
+                  {selectedFile && !isParsing && (
+                    <p className="text-xs text-muted-foreground">
+                      💡 คลิก "Parse Resume with AI" เพื่อดึงข้อมูลจาก Resume อัตโนมัติ
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
