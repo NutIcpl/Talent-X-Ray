@@ -55,6 +55,7 @@ const JobApplication = () => {
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [privacyDialogOpen, setPrivacyDialogOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   
   const [educations, setEducations] = useState<Education[]>([
     { level: "high-school", institution: "", major: "", gpa: "", yearGraduated: "" },
@@ -165,11 +166,62 @@ const JobApplication = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-      toast({
-        title: "ไฟล์ถูกเลือกแล้ว",
-        description: `${e.target.files[0].name}`,
-      });
+      const file = e.target.files[0];
+      if (file.type === 'application/pdf') {
+        setSelectedFile(file);
+        toast({
+          title: "ไฟล์ถูกเลือกแล้ว",
+          description: file.name,
+        });
+      } else {
+        toast({
+          title: "รองรับเฉพาะไฟล์ PDF",
+          description: "กรุณาเลือกไฟล์ PDF เท่านั้น",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      const file = files[0];
+      if (file.type === 'application/pdf') {
+        setSelectedFile(file);
+        addSparkleEffect(e as any);
+        toast({
+          title: "ไฟล์ถูกเลือกแล้ว",
+          description: file.name,
+        });
+      } else {
+        toast({
+          title: "รองรับเฉพาะไฟล์ PDF",
+          description: "กรุณาเลือกไฟล์ PDF เท่านั้น",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -472,17 +524,26 @@ const JobApplication = () => {
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <Label className="text-base font-semibold">
                       Attached CV / แนบไฟล์ Resume <span className="text-destructive">*</span>
                     </Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={selectedFile?.name || ""}
-                        readOnly
-                        placeholder="ยังไม่ได้เลือกไฟล์"
-                        className="flex-1 border-2"
-                      />
+                    
+                    {/* Drag & Drop Zone */}
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragEnter={handleDragEnter}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`
+                        relative border-2 border-dashed rounded-xl p-8 transition-all duration-300
+                        ${isDragging 
+                          ? 'border-primary bg-primary/10 scale-[1.02]' 
+                          : 'border-border hover:border-primary/50 bg-gradient-to-br from-primary/5 to-secondary/5'
+                        }
+                        ${selectedFile ? 'border-solid border-primary/30' : ''}
+                      `}
+                    >
                       <input
                         id="resume"
                         type="file"
@@ -490,41 +551,81 @@ const JobApplication = () => {
                         onChange={handleFileChange}
                         className="hidden"
                       />
-                      <label htmlFor="resume">
-                        <Button 
-                          type="button" 
-                          variant="secondary" 
-                          className="cursor-pointer hover-scale"
-                          onClick={(e) => addSparkleEffect(e as any)}
-                          asChild
-                        >
-                          <span className="flex items-center gap-2">
-                            <Upload className="w-4 h-4" />
-                            Browse
-                          </span>
-                        </Button>
-                      </label>
-                      {selectedFile && (
-                        <Button 
-                          type="button" 
-                          onClick={parseResumeWithAI}
-                          disabled={isParsing}
-                          className="gap-2 bg-gradient-to-r from-primary to-secondary hover:opacity-90"
-                        >
-                          {isParsing ? (
-                            <>
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                              Parsing...
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-4 h-4" />
-                              AI Parse
-                            </>
-                          )}
-                        </Button>
+                      
+                      {!selectedFile ? (
+                        <label htmlFor="resume" className="cursor-pointer block">
+                          <div className="flex flex-col items-center gap-4">
+                            <div className={`
+                              p-4 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 transition-transform duration-300
+                              ${isDragging ? 'scale-110 animate-pulse' : 'hover:scale-110'}
+                            `}>
+                              <FileText className={`w-10 h-10 transition-colors ${isDragging ? 'text-primary animate-bounce' : 'text-primary/70'}`} />
+                            </div>
+                            <div className="text-center space-y-2">
+                              <p className="text-base font-semibold text-foreground">
+                                {isDragging ? 'วาง PDF ที่นี่...' : 'ลากและวาง PDF ที่นี่'}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                หรือ คลิกเพื่อเลือกไฟล์ PDF
+                              </p>
+                              <p className="text-xs text-muted-foreground italic">
+                                รองรับเฉพาะไฟล์ PDF เท่านั้น
+                              </p>
+                            </div>
+                          </div>
+                        </label>
+                      ) : (
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className="p-3 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20">
+                              <FileText className="w-6 h-6 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-foreground truncate">{selectedFile.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setSelectedFile(null)}
+                              className="hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
                       )}
                     </div>
+
+                    {/* AI Parse Button */}
+                    {selectedFile && (
+                      <Button 
+                        type="button" 
+                        onClick={(e) => {
+                          addSparkleEffect(e as any);
+                          parseResumeWithAI();
+                        }}
+                        disabled={isParsing}
+                        className="w-full gap-2 bg-gradient-to-r from-primary via-secondary to-accent hover:opacity-90 hover-scale"
+                      >
+                        {isParsing ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            กำลัง Parse Resume ด้วย AI...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4" />
+                            Parse Resume with AI
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
