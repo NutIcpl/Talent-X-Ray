@@ -444,10 +444,24 @@ const JobApplication = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.position || !formData.firstName || !formData.email || !selectedFile || !formData.privacyConsent) {
+    
+    // Validate required fields
+    const requiredFields = [
+      { value: formData.position, label: "ตำแหน่งที่สมัคร" },
+      { value: selectedFile, label: "Resume / CV" },
+      { value: formData.firstName, label: "ชื่อ" },
+      { value: formData.lastName, label: "นามสกุล" },
+      { value: formData.mobilePhone, label: "เบอร์โทรศัพท์" },
+      { value: formData.email, label: "อีเมล" },
+      { value: formData.privacyConsent, label: "ยินยอมนโยบายความเป็นส่วนตัว" },
+    ];
+
+    const missingFields = requiredFields.filter(field => !field.value);
+    
+    if (missingFields.length > 0) {
       toast({
         title: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        description: "กรุณากรอกข้อมูลทุกช่องที่มีเครื่องหมาย * อัปโหลดเรซูเม่ และยินยอมนโยบายความเป็นส่วนตัว",
+        description: `ช่องที่ยังไม่ได้กรอก: ${missingFields.map(f => f.label).join(", ")}`,
         variant: "destructive",
       });
       return;
@@ -573,7 +587,6 @@ const JobApplication = () => {
                       type="number"
                       value={formData.expectedSalary}
                       onChange={(e) => setFormData({ ...formData, expectedSalary: e.target.value })}
-                      placeholder="25,000"
                       className="border-2 focus:border-primary"
                     />
                   </div>
@@ -726,7 +739,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.firstName}
                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    placeholder="สมชาย / Somchai"
                     className="border-2 focus:border-secondary"
                   />
                 </div>
@@ -738,7 +750,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.lastName}
                     onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    placeholder="ใจดี / Jaidee"
                     className="border-2 focus:border-secondary"
                   />
                 </div>
@@ -748,7 +759,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.nickname}
                     onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
-                    placeholder="ชาย"
                     className="border-2 focus:border-secondary"
                   />
                 </div>
@@ -760,7 +770,6 @@ const JobApplication = () => {
                 <Input
                   value={formData.presentAddress}
                   onChange={(e) => setFormData({ ...formData, presentAddress: e.target.value })}
-                  placeholder="123 ถนน..."
                   className="border-2 focus:border-secondary"
                 />
               </div>
@@ -771,7 +780,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.moo}
                     onChange={(e) => setFormData({ ...formData, moo: e.target.value })}
-                    placeholder="1"
                     className="border-2"
                   />
                 </div>
@@ -781,7 +789,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.district}
                     onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                    placeholder="บางกะปิ"
                     className="border-2"
                   />
                 </div>
@@ -791,7 +798,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.subDistrict}
                     onChange={(e) => setFormData({ ...formData, subDistrict: e.target.value })}
-                    placeholder="หัวหมาก"
                     className="border-2"
                   />
                 </div>
@@ -801,7 +807,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.province}
                     onChange={(e) => setFormData({ ...formData, province: e.target.value })}
-                    placeholder="กรุงเทพฯ"
                     className="border-2"
                   />
                 </div>
@@ -813,7 +818,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.zipCode}
                     onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
-                    placeholder="10240"
                     maxLength={5}
                     className="border-2"
                   />
@@ -826,7 +830,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.mobilePhone}
                     onChange={(e) => setFormData({ ...formData, mobilePhone: e.target.value })}
-                    placeholder="081-234-5678"
                     className="border-2"
                   />
                 </div>
@@ -839,7 +842,6 @@ const JobApplication = () => {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="email@example.com"
                     className="border-2"
                   />
                 </div>
@@ -863,7 +865,6 @@ const JobApplication = () => {
                     type="number"
                     value={formData.age}
                     onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-                    placeholder="25"
                     className="border-2"
                   />
                 </div>
@@ -873,7 +874,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.idCard}
                     onChange={(e) => setFormData({ ...formData, idCard: e.target.value })}
-                    placeholder="1-2345-67890-12-3"
                     maxLength={17}
                     className="border-2"
                   />
@@ -920,7 +920,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.religion}
                     onChange={(e) => setFormData({ ...formData, religion: e.target.value })}
-                    placeholder="พุทธ"
                     className="border-2"
                   />
                 </div>
@@ -931,7 +930,6 @@ const JobApplication = () => {
                     type="number"
                     value={formData.height}
                     onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                    placeholder="170"
                     className="border-2"
                   />
                 </div>
@@ -942,7 +940,6 @@ const JobApplication = () => {
                     type="number"
                     value={formData.weight}
                     onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                    placeholder="65"
                     className="border-2"
                   />
                 </div>
@@ -999,7 +996,6 @@ const JobApplication = () => {
                       <Input
                         value={member.name}
                         onChange={(e) => updateFamilyMember(index, "name", e.target.value)}
-                        placeholder="นายสมศักดิ์ ใจดี"
                         className="border-2"
                       />
                     </div>
@@ -1029,7 +1025,6 @@ const JobApplication = () => {
                       <Input
                         value={member.age}
                         onChange={(e) => updateFamilyMember(index, "age", e.target.value)}
-                        placeholder="55"
                         className="border-2"
                       />
                     </div>
@@ -1039,7 +1034,6 @@ const JobApplication = () => {
                       <Input
                         value={member.occupation}
                         onChange={(e) => updateFamilyMember(index, "occupation", e.target.value)}
-                        placeholder="ธุรกิจส่วนตัว"
                         className="border-2"
                       />
                     </div>
@@ -1091,7 +1085,6 @@ const JobApplication = () => {
                     <Input
                       value={formData.spouseName}
                       onChange={(e) => setFormData({ ...formData, spouseName: e.target.value })}
-                      placeholder="นางสาวสมหญิง ใจดี"
                       className="border-2"
                     />
                   </div>
@@ -1101,7 +1094,6 @@ const JobApplication = () => {
                     <Input
                       value={formData.spouseOccupation}
                       onChange={(e) => setFormData({ ...formData, spouseOccupation: e.target.value })}
-                      placeholder="พนักงานบริษัท"
                       className="border-2"
                     />
                   </div>
@@ -1112,7 +1104,6 @@ const JobApplication = () => {
                       type="number"
                       value={formData.numberOfChildren}
                       onChange={(e) => setFormData({ ...formData, numberOfChildren: e.target.value })}
-                      placeholder="2"
                       className="border-2"
                     />
                   </div>
@@ -1141,7 +1132,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.emergencyName}
                     onChange={(e) => setFormData({ ...formData, emergencyName: e.target.value })}
-                    placeholder="นางสาวสมหญิง ใจดี"
                     className="border-2"
                   />
                 </div>
@@ -1151,7 +1141,6 @@ const JobApplication = () => {
                   <Input
                     value={formData.emergencyRelation}
                     onChange={(e) => setFormData({ ...formData, emergencyRelation: e.target.value })}
-                    placeholder="มารดา / Mother"
                     className="border-2"
                   />
                 </div>
@@ -1162,7 +1151,6 @@ const JobApplication = () => {
                 <Textarea
                   value={formData.emergencyAddress}
                   onChange={(e) => setFormData({ ...formData, emergencyAddress: e.target.value })}
-                  placeholder="123 ถนน... แขวง... เขต... กรุงเทพฯ"
                   rows={2}
                   className="border-2 resize-none"
                 />
@@ -1173,7 +1161,6 @@ const JobApplication = () => {
                 <Input
                   value={formData.emergencyPhone}
                   onChange={(e) => setFormData({ ...formData, emergencyPhone: e.target.value })}
-                  placeholder="081-234-5678"
                   className="border-2"
                 />
               </div>
@@ -1210,7 +1197,6 @@ const JobApplication = () => {
                       <Input
                         value={edu.yearGraduated}
                         onChange={(e) => updateEducation(index, "yearGraduated", e.target.value)}
-                        placeholder="2565"
                         className="border-2"
                       />
                     </div>
@@ -1220,7 +1206,6 @@ const JobApplication = () => {
                       <Input
                         value={edu.institution}
                         onChange={(e) => updateEducation(index, "institution", e.target.value)}
-                        placeholder="จุฬาลงกรณ์มหาวิทยาลัย"
                         className="border-2"
                       />
                     </div>
@@ -1230,7 +1215,6 @@ const JobApplication = () => {
                       <Input
                         value={edu.major}
                         onChange={(e) => updateEducation(index, "major", e.target.value)}
-                        placeholder="วิทยาการคอมพิวเตอร์"
                         className="border-2"
                       />
                     </div>
@@ -1240,7 +1224,6 @@ const JobApplication = () => {
                       <Input
                         value={edu.gpa}
                         onChange={(e) => updateEducation(index, "gpa", e.target.value)}
-                        placeholder="3.50"
                         className="border-2"
                       />
                     </div>
@@ -1397,7 +1380,6 @@ const JobApplication = () => {
                     </div>
                     {formData.drivingCar && (
                       <Input
-                        placeholder="Driver Licence No. / ใบขับขี่หมายเลข"
                         value={formData.drivingCarLicenseNo}
                         onChange={(e) => setFormData({ ...formData, drivingCarLicenseNo: e.target.value })}
                         className="border-2 ml-6"
@@ -1420,7 +1402,6 @@ const JobApplication = () => {
                     </div>
                     {formData.drivingMotorcycle && (
                       <Input
-                        placeholder="Driver Licence No. / ใบขับขี่หมายเลข"
                         value={formData.drivingMotorcycleLicenseNo}
                         onChange={(e) => setFormData({ ...formData, drivingMotorcycleLicenseNo: e.target.value })}
                         className="border-2 ml-6"
@@ -1431,7 +1412,6 @@ const JobApplication = () => {
                   <div className="space-y-2">
                     <Label>☐ Others / อื่นๆ</Label>
                     <Input
-                      placeholder="ระบุทักษะอื่นๆ..."
                       value={formData.otherSkills}
                       onChange={(e) => setFormData({ ...formData, otherSkills: e.target.value })}
                       className="border-2"
@@ -1459,7 +1439,6 @@ const JobApplication = () => {
               <Textarea
                 value={formData.trainingCurriculums}
                 onChange={(e) => setFormData({ ...formData, trainingCurriculums: e.target.value })}
-                placeholder="ระบุหลักสูตรการฝึกอบรมที่เคยเข้าร่วม เช่น&#10;- หลักสูตรการพัฒนาทักษะการบริหารจัดการ (2565)&#10;- หลักสูตร ISO 9001:2015 (2564)"
                 rows={5}
                 className="border-2 resize-none"
               />
@@ -1515,7 +1494,6 @@ const JobApplication = () => {
                       <Input
                         value={work.duration}
                         onChange={(e) => updateWorkExperience(index, "duration", e.target.value)}
-                        placeholder="2563-2565 (2 ปี)"
                         className="border-2"
                       />
                     </div>
@@ -1525,7 +1503,6 @@ const JobApplication = () => {
                       <Input
                         value={work.company}
                         onChange={(e) => updateWorkExperience(index, "company", e.target.value)}
-                        placeholder="ABC Company Ltd."
                         className="border-2"
                       />
                     </div>
@@ -1535,7 +1512,6 @@ const JobApplication = () => {
                       <Input
                         value={work.position}
                         onChange={(e) => updateWorkExperience(index, "position", e.target.value)}
-                        placeholder="Software Engineer"
                         className="border-2"
                       />
                     </div>
@@ -1545,7 +1521,6 @@ const JobApplication = () => {
                       <Input
                         value={work.responsibilities}
                         onChange={(e) => updateWorkExperience(index, "responsibilities", e.target.value)}
-                        placeholder="พัฒนาระบบ Web Application"
                         className="border-2"
                       />
                     </div>
@@ -1555,7 +1530,6 @@ const JobApplication = () => {
                       <Input
                         value={work.salary}
                         onChange={(e) => updateWorkExperience(index, "salary", e.target.value)}
-                        placeholder="30,000 บาท"
                         className="border-2"
                       />
                     </div>
@@ -1565,7 +1539,6 @@ const JobApplication = () => {
                       <Input
                         value={work.reason}
                         onChange={(e) => updateWorkExperience(index, "reason", e.target.value)}
-                        placeholder="ต้องการพัฒนาความสามารถ"
                         className="border-2"
                       />
                     </div>
@@ -1611,7 +1584,6 @@ const JobApplication = () => {
                 </RadioGroup>
                 {formData.workedAtICPBefore === "yes" && (
                   <Input
-                    placeholder="If yes, please give details / ถ้าเคยโปรดระบุ"
                     value={formData.workedAtICPDetails}
                     onChange={(e) => setFormData({ ...formData, workedAtICPDetails: e.target.value })}
                     className="border-2"
@@ -1641,7 +1613,6 @@ const JobApplication = () => {
                 </RadioGroup>
                 {formData.relativesAtICP === "yes" && (
                   <Input
-                    placeholder="If yes, please give details / ถ้าเคยโปรดระบุ"
                     value={formData.relativesAtICPDetails}
                     onChange={(e) => setFormData({ ...formData, relativesAtICPDetails: e.target.value })}
                     className="border-2"
@@ -1671,7 +1642,6 @@ const JobApplication = () => {
                 </RadioGroup>
                 {formData.criminalRecord === "yes" && (
                   <Input
-                    placeholder="If yes, please give details / ถ้าเคยโปรดระบุ"
                     value={formData.criminalRecordDetails}
                     onChange={(e) => setFormData({ ...formData, criminalRecordDetails: e.target.value })}
                     className="border-2"
@@ -1701,7 +1671,6 @@ const JobApplication = () => {
                 </RadioGroup>
                 {formData.seriousIllness === "yes" && (
                   <Input
-                    placeholder="If yes, please give details / ถ้าเคยโปรดระบุ"
                     value={formData.seriousIllnessDetails}
                     onChange={(e) => setFormData({ ...formData, seriousIllnessDetails: e.target.value })}
                     className="border-2"
