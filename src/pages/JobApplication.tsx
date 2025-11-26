@@ -361,15 +361,69 @@ const JobApplication = () => {
       }
 
       if (data?.success && data?.data) {
-        const parsed = data.data;
+        const parsed = data.data as {
+          name?: string;
+          email?: string;
+          phone?: string;
+          position?: string;
+          experience?: string;
+          education?: string;
+          skills?: string[];
+        };
+
+        const fullName = (parsed.name || "").trim();
+        let firstNameFromFull = "";
+        let lastNameFromFull = "";
+
+        if (fullName) {
+          const nameParts = fullName.split(/\s+/);
+          firstNameFromFull = nameParts[0] ?? "";
+          lastNameFromFull = nameParts.slice(1).join(" ");
+        }
         
         setFormData(prev => ({
           ...prev,
-          firstName: parsed.name || prev.firstName,
+          firstName: firstNameFromFull || parsed.name || prev.firstName,
+          lastName: lastNameFromFull || prev.lastName,
           email: parsed.email || prev.email,
           mobilePhone: parsed.phone || prev.mobilePhone,
           position: parsed.position || prev.position,
+          otherSkills:
+            parsed.skills && parsed.skills.length
+              ? prev.otherSkills
+                ? `${prev.otherSkills}\n${parsed.skills.join(", ")}`
+                : parsed.skills.join(", ")
+              : prev.otherSkills,
+          trainingCurriculums:
+            parsed.education && !prev.trainingCurriculums
+              ? parsed.education
+              : prev.trainingCurriculums,
         }));
+
+        if (parsed.experience) {
+          setWorkExperiences(prevWorks => {
+            if (!prevWorks.length) {
+              return [
+                {
+                  company: "",
+                  position: "",
+                  duration: "",
+                  salary: "",
+                  responsibilities: parsed.experience || "",
+                  reason: "",
+                },
+              ];
+            }
+
+            const [first, ...rest] = prevWorks;
+            if (first.responsibilities) {
+              return prevWorks;
+            }
+
+            const updatedFirst = { ...first, responsibilities: parsed.experience || first.responsibilities };
+            return [updatedFirst, ...rest];
+          });
+        }
 
         toast({
           title: "Parse สำเร็จ!",
