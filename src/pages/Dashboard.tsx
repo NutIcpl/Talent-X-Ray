@@ -301,59 +301,123 @@ export default function Dashboard() {
     setCandidateDialogOpen(true);
   };
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"></h1>
-        <p className="text-muted-foreground"></p>
+    <div className="space-y-8 pb-8">
+      {/* Hero Section - Company Profile */}
+      <section className="animate-fade-in">
+        <CompanyProfile />
+      </section>
+
+      {/* Benefits Section */}
+      <section className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
+        <EmployeeBenefits />
+      </section>
+
+      {/* Divider */}
+      <div className="relative py-4">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border/50"></div>
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-background px-4 text-sm text-muted-foreground font-medium">
+            ร่วมงานกับเรา
+          </span>
+        </div>
       </div>
 
-      {/* Company Profile */}
-      <CompanyProfile />
-
-      {/* Employee Benefits */}
-      <EmployeeBenefits />
-
-      {/* Open Positions */}
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            ตำแหน่งที่เปิดรับสมัคร
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {openPositions.map((position) => (
-              <div
-                key={position.id}
-                className="group p-4 rounded-xl bg-gradient-to-br from-accent/30 to-accent/10 hover:from-accent/50 hover:to-accent/20 border border-border/50 hover:border-primary/30 transition-all duration-300 cursor-pointer hover:shadow-md hover-scale"
-                onClick={() => handleJobClick(position)}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-base group-hover:text-primary transition-colors mb-1">
-                      {position.title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">{position.department}</p>
+      {/* Open Positions Section */}
+      <section className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <Card className="hover:shadow-lg transition-all duration-300 border-border/50">
+          <CardHeader className="pb-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-2xl">
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                ตำแหน่งที่เปิดรับสมัคร
+              </CardTitle>
+              <Badge variant="outline" className="text-sm">
+                {openPositions.length} ตำแหน่ง
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              เลือกตำแหน่งที่เหมาะสมกับคุณและก้าวสู่ความสำเร็จไปกับเรา
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {openPositions.map((position) => (
+                <div
+                  key={position.id}
+                  className="group relative p-5 rounded-xl bg-gradient-to-br from-card to-accent/5 hover:from-primary/5 hover:to-primary/10 border border-border/50 hover:border-primary/40 transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-1"
+                  onClick={() => handleJobClick(position)}
+                >
+                  {/* Position Badge */}
+                  <div className="absolute top-3 right-3">
+                    <Badge 
+                      variant={position.status === "open" ? "default" : "secondary"} 
+                      className="text-xs shadow-sm"
+                    >
+                      {position.status === "open" ? "เปิดรับ" : "ปิดรับ"}
+                    </Badge>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {position.status === "open" ? "เปิดรับ" : "ปิดรับ"}
-                  </Badge>
+
+                  <div className="space-y-3 pr-16">
+                    {/* Title & Department */}
+                    <div>
+                      <h3 className="font-bold text-base group-hover:text-primary transition-colors mb-1 line-clamp-2">
+                        {position.title}
+                      </h3>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <div className="h-1 w-1 rounded-full bg-muted-foreground/50" />
+                        {position.department}
+                      </p>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex items-center gap-4 text-xs pt-2 border-t border-border/30">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-2 w-2 rounded-full bg-primary/60" />
+                        <span className="text-muted-foreground">
+                          <span className="font-semibold text-foreground">{position.numberOfPositions}</span> อัตรา
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-2 w-2 rounded-full bg-success/60" />
+                        <span className="text-muted-foreground">
+                          <span className="font-semibold text-foreground">{position.applicants}</span> ผู้สมัคร
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Hover Effect */}
+                    <div className="pt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-xs text-primary font-medium flex items-center gap-1">
+                        ดูรายละเอียด
+                        <span className="group-hover:translate-x-1 transition-transform">→</span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/30">
-                  <span className="flex items-center gap-1">
-                    <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    {position.numberOfPositions} อัตรา
-                  </span>
-                  <span>{position.applicants} ผู้สมัคร</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Divider */}
+      <div className="relative py-4">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border/50"></div>
+        </div>
+        <div className="relative flex justify-center">
+          <span className="bg-background px-4 text-sm text-muted-foreground font-medium">
+            ติดต่อเรา
+          </span>
+        </div>
+      </div>
 
       {/* Contact & Map Section */}
-      <ContactMap />
+      <section className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
+        <ContactMap />
+      </section>
 
       {/* Job Detail Dialog */}
       <JobDetailDialog 
