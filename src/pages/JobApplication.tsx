@@ -473,7 +473,11 @@ const JobApplication = () => {
 
       // Upload resume file
       if (selectedFile) {
-        const resumeFileName = `${Date.now()}_${selectedFile.name}`;
+        // Sanitize filename to remove special characters and Thai characters
+        const sanitizedResumeName = selectedFile.name
+          .replace(/[^\w.-]/g, '_')
+          .replace(/_{2,}/g, '_');
+        const resumeFileName = `${Date.now()}_${sanitizedResumeName}`;
         const { error: resumeError } = await supabase.storage
           .from('resumes')
           .upload(resumeFileName, selectedFile);
@@ -496,7 +500,11 @@ const JobApplication = () => {
 
       // Upload profile photo
       if (profilePhoto) {
-        const photoFileName = `${Date.now()}_${profilePhoto.name}`;
+        // Sanitize filename to remove special characters and Thai characters
+        const sanitizedPhotoName = profilePhoto.name
+          .replace(/[^\w.-]/g, '_')
+          .replace(/_{2,}/g, '_');
+        const photoFileName = `${Date.now()}_${sanitizedPhotoName}`;
         const { error: photoError } = await supabase.storage
           .from('profile-photos')
           .upload(photoFileName, profilePhoto);
