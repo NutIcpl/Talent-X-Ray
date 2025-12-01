@@ -448,8 +448,8 @@ export function CombinedInterviewDialog({
                 {/* Table Header */}
                 <div className="grid grid-cols-[1fr_80px_80px] gap-2 bg-yellow-100 p-3 font-semibold text-xs border-b-2 border-black">
                   <div>หัวข้อการประเมินผลการสัมภาษณ์</div>
-                  <div className="text-center">ตีนสังกัด<br/>สัมภาษณ์ครั้งที่ 1</div>
-                  <div className="text-center">ตีนสังกัด<br/>สัมภาษณ์ครั้งที่ 2</div>
+                  <div className="text-center">ตีนสังกัด<br/>First Interview</div>
+                  <div className="text-center">ตีนสังกัด<br/>Final Interview</div>
                 </div>
 
                 {/* Evaluation Rows */}
@@ -529,7 +529,7 @@ export function CombinedInterviewDialog({
                   name="manager_feedback"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>ตีนสังกัดสัมภาษณ์ครั้งที่ 1</FormLabel>
+                      <FormLabel>ตีนสังกัด First Interview</FormLabel>
                       <FormControl>
                         <Textarea 
                           placeholder="ใส่ข้อคิดเห็นเพิ่มเติมจากการสัมภาษณ์" 
@@ -546,7 +546,7 @@ export function CombinedInterviewDialog({
                   name="is_feedback"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>ตีนสังกัดสัมภาษณ์ครั้งที่ 2</FormLabel>
+                      <FormLabel>ตีนสังกัด Final Interview</FormLabel>
                       <FormControl>
                         <Textarea 
                           placeholder="ใส่ข้อคิดเห็นเพิ่มเติมจากการสัมภาษณ์" 
