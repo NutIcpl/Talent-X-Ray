@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -429,6 +430,12 @@ export default function Candidates() {
                     onCheckedChange={() => toggleCandidateSelection(candidate.id)}
                     className="mt-1"
                   />
+                  <Avatar className="h-14 w-14 border-2 border-primary/40 shadow-sm">
+                    <AvatarImage src={candidate.photoUrl} alt={candidate.name} />
+                    <AvatarFallback>
+                      {candidate.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="relative">
                     <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-xl shadow-primary">
                       {candidate.score}

@@ -144,19 +144,22 @@ const JobApplication = () => {
     privacyConsent: false,
   });
 
-  const availablePositions = [
+  const [availablePositions, setAvailablePositions] = useState<string[]>([
     "Senior Software Engineer",
     "Product Manager",
     "UX/UI Designer",
     "Data Analyst",
     "Marketing Manager",
     "Sales Executive",
-  ];
-
+  ]);
+ 
   useEffect(() => {
     const state = location.state as { jobTitle?: string } | null;
     if (state?.jobTitle) {
       setFormData(prev => ({ ...prev, position: state.jobTitle }));
+      setAvailablePositions(prev =>
+        prev.includes(state.jobTitle!) ? prev : [state.jobTitle!, ...prev]
+      );
       toast({
         title: "ตำแหน่งงานถูกเลือกแล้ว",
         description: `คุณกำลังสมัครตำแหน่ง: ${state.jobTitle}`,
@@ -556,6 +559,7 @@ const JobApplication = () => {
         skills: [],
         resumeFile: selectedFile.name,
         coverLetter: "",
+        photoUrl: photoUrl || undefined,
       });
 
       toast({
