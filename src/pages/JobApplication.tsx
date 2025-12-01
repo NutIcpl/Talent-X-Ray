@@ -541,20 +541,11 @@ const JobApplication = () => {
         });
 
       if (insertError) {
-        // Check if it's a duplicate email error
-        if (insertError.code === '23505' && insertError.message.includes('candidates_email_key')) {
-          toast({
-            title: "อีเมลนี้เคยใช้สมัครงานแล้ว",
-            description: "อีเมล " + formData.email + " ได้ถูกใช้สมัครงานไปแล้ว กรุณาใช้อีเมลอื่น หรือติดต่อแผนกทรัพยากรบุคคล",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "เกิดข้อผิดพลาด",
-            description: "ไม่สามารถบันทึกข้อมูลผู้สมัครได้ กรุณาลองอีกครั้ง",
-            variant: "destructive",
-          });
-        }
+        toast({
+          title: "เกิดข้อผิดพลาด",
+          description: "ไม่สามารถบันทึกข้อมูลผู้สมัครได้",
+          variant: "destructive",
+        });
         return;
       }
 
