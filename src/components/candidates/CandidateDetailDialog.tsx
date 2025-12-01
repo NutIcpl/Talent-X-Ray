@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Mail, Phone, MapPin, Calendar, Briefcase, GraduationCap, Star, FileText, Edit, Trash2, CheckCircle2, Circle, Heart, X } from "lucide-react";
 import { SingleInterviewDialog } from "./SingleInterviewDialog";
 import { TestScoreDialog } from "./TestScoreDialog";
@@ -36,6 +37,7 @@ interface CandidateDetailDialogProps {
     education?: string;
     summary?: string;
     previousCompany?: string;
+    photoUrl?: string;
     testScores?: {
       hrTest?: number;
       departmentTest?: number;
@@ -188,6 +190,15 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
         <DialogHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-4 flex-1">
+              {/* Candidate Photo */}
+              <Avatar className="h-20 w-20 border-4 border-primary/20 shadow-lg">
+                <AvatarImage src={candidate.photoUrl} alt={candidate.name} />
+                <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-primary to-primary/80 text-white">
+                  {candidate.name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              
+              {/* Score Badge */}
               <div className="relative">
                 <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
                   {candidate.score}
@@ -198,6 +209,8 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                   </div>
                 )}
               </div>
+              
+              {/* Candidate Info */}
               <div>
                 <DialogTitle className="text-2xl mb-2">{candidate.name}</DialogTitle>
                 <div className="flex items-center gap-2">
