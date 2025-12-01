@@ -558,6 +558,7 @@ const JobApplication = () => {
         experience: "ระบุในเรซูเม่",
         skills: [],
         resumeFile: selectedFile.name,
+        resumeUrl: resumeUrl || undefined,
         coverLetter: "",
         photoUrl: photoUrl || undefined,
       });

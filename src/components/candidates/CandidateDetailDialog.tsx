@@ -38,6 +38,7 @@ interface CandidateDetailDialogProps {
     summary?: string;
     previousCompany?: string;
     photoUrl?: string;
+    resumeUrl?: string;
     testScores?: {
       hrTest?: number;
       departmentTest?: number;

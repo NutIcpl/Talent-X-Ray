@@ -1,7 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Phone, MapPin, Briefcase, GraduationCap, Calendar } from "lucide-react";
+import { Mail, Phone, MapPin, Briefcase, GraduationCap, Calendar, FileText, ExternalLink } from "lucide-react";
 
 interface ResumeDialogProps {
   candidate: {
@@ -15,6 +16,7 @@ interface ResumeDialogProps {
     previousCompany?: string;
     summary?: string;
     skills: string[];
+    resumeUrl?: string;
   } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -27,7 +29,21 @@ export function ResumeDialog({ candidate, open, onOpenChange }: ResumeDialogProp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">เรซูเม่</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-2xl">เรซูเม่</DialogTitle>
+            {candidate.resumeUrl && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(candidate.resumeUrl, '_blank')}
+                className="gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                ดาวน์โหลด PDF
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="space-y-6 mt-4 bg-background p-6 rounded-lg border">

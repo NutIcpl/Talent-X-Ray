@@ -7,6 +7,7 @@ export interface Candidate {
   phone: string;
   position: string;
   photoUrl?: string;
+  resumeUrl?: string;
   status: "screening" | "interview" | "shortlisted" | "interested" | "not_interested";
   applicationDate?: string;
   appliedDate: string;
