@@ -123,154 +123,185 @@ export const exportCandidateEvaluationPDF = (candidate: CandidateData) => {
     yPosition = (doc as any).lastAutoTable.finalY + 12;
   }
 
-  // First Interview (Manager)
-  if (candidate.interviews?.manager) {
+  // Combined Interview Evaluation Table (First Interview + Final Interview)
+  if (candidate.interviews?.manager || candidate.interviews?.isTeam) {
     // Check if we need a new page
-    if (yPosition > 240) {
+    if (yPosition > 200) {
       doc.addPage();
       yPosition = 20;
     }
 
     doc.setFontSize(14);
     doc.setTextColor(41, 128, 185);
-    doc.text("First Interview (Manager)", 14, yPosition);
-    yPosition += 8;
+    doc.text("หัวข้อการประเมินผลการสัมภาษณ์", 14, yPosition);
+    yPosition += 10;
 
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
+    // Interview dates and results summary
+    const managerDate = candidate.interviews?.manager?.date || "-";
+    const managerScore = candidate.interviews?.manager?.total_score || 0;
+    const isTeamDate = candidate.interviews?.isTeam?.date || "-";
+    const isTeamScore = candidate.interviews?.isTeam?.total_score || 0;
+
+    const summaryData = [
+      ["วันที่สัมภาษณ์", managerDate, isTeamDate],
+      ["คะแนนรวม", `${managerScore} / 70`, `${isTeamScore} / 70`],
+    ];
+
+    (doc as any).autoTable({
+      startY: yPosition,
+      head: [["", "First Interview (Manager)", "Final Interview (IS)"]],
+      body: summaryData,
+      theme: 'grid',
+      headStyles: { 
+        fillColor: [41, 128, 185], 
+        fontSize: 10,
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 60 },
+        1: { cellWidth: 60, halign: 'center' },
+        2: { cellWidth: 60, halign: 'center' }
+      },
+      styles: { font: 'Sarabun', fontSize: 9 },
+    });
+
+    yPosition = (doc as any).lastAutoTable.finalY + 10;
+
+    // Combined evaluation scores table
+    const managerScores = candidate.interviews?.manager?.scores;
+    const isTeamScores = candidate.interviews?.isTeam?.scores;
+
+    const evaluationData = [
+      [
+        "1. ทักษะและความรู้ในงาน – มีความรู้ ทักษะ และประสบการณ์ ตรงกับตำแหน่ง",
+        managerScores?.skill_knowledge?.toString() || "-",
+        isTeamScores?.skill_knowledge?.toString() || "-"
+      ],
+      [
+        "2. การสื่อสาร – พูดชัดเจน น้ำใจง่าย ตอบคำถามตรงประเด็น",
+        managerScores?.communication?.toString() || "-",
+        isTeamScores?.communication?.toString() || "-"
+      ],
+      [
+        "3. บุคลิกภาพและความมั่นใจ – ดูน่าเชื่อถือ มั่นใจในตัวเอง และเป็นมิตร",
+        managerScores?.creativity?.toString() || "-",
+        isTeamScores?.creativity?.toString() || "-"
+      ],
+      [
+        "4. ทัศนคติและแรงจูงใจ – แสดงความสนใจและตั้งใจอยากทำงานจริง ๆ",
+        managerScores?.motivation?.toString() || "-",
+        isTeamScores?.motivation?.toString() || "-"
+      ],
+      [
+        "5. การทำงานร่วมกับคนอื่น – พร้อมร่วมงานกับผู้อื่น เปิดใจและมี Teamwork",
+        managerScores?.teamwork?.toString() || "-",
+        isTeamScores?.teamwork?.toString() || "-"
+      ],
+      [
+        "6. การคิดวิเคราะห์และแก้ปัญหา – มีวิธีคิดเป็นระบบ รับมือกับสถานการณ์ได้ดี",
+        managerScores?.analytical?.toString() || "-",
+        isTeamScores?.analytical?.toString() || "-"
+      ],
+      [
+        "7. วัฒนธรรมองค์กร – มีทัศนคติและพฤติกรรมที่เข้ากับค่านิยมขององค์กร",
+        managerScores?.culture_fit?.toString() || "-",
+        isTeamScores?.culture_fit?.toString() || "-"
+      ],
+    ];
+
+    (doc as any).autoTable({
+      startY: yPosition,
+      head: [["หัวข้อการประเมินผลการสัมภาษณ์", "ตีนสังกัด\nสัมภาษณ์ครั้งที่ 1", "ตีนสังกัด\nสัมภาษณ์ครั้งที่ 2"]],
+      body: evaluationData,
+      theme: 'grid',
+      headStyles: { 
+        fillColor: [255, 255, 153], 
+        textColor: [0, 0, 0],
+        fontSize: 9,
+        fontStyle: 'bold',
+        halign: 'center',
+        lineWidth: 0.5,
+        lineColor: [0, 0, 0]
+      },
+      columnStyles: {
+        0: { cellWidth: 100, fontSize: 8 },
+        1: { cellWidth: 40, halign: 'center', fontSize: 9 },
+        2: { cellWidth: 40, halign: 'center', fontSize: 9 }
+      },
+      bodyStyles: {
+        lineWidth: 0.5,
+        lineColor: [0, 0, 0]
+      },
+      styles: { 
+        font: 'Sarabun', 
+        fontSize: 8,
+        cellPadding: 3
+      },
+    });
+
+    yPosition = (doc as any).lastAutoTable.finalY + 8;
+
+    // Summary row with pass/fail criteria
+    const summaryText = "รวมคะแนน\n[ เกณฑ์คะแนน  ≥ 50 ผ่านเกณฑ์รับเข้าทำงาน, 45-49 สำรองไว้พิจารณา, < 45 ไม่ผ่านการสัมภาษณ์ ]";
     
-    const managerBasicData = [
-      ["วันที่สัมภาษณ์", candidate.interviews.manager.date || "-"],
-      ["คะแนนรวม", candidate.interviews.manager.total_score ? `${candidate.interviews.manager.total_score} / 70` : "-"],
-      ["ผลการสัมภาษณ์", candidate.interviews.manager.passed ? "ผ่าน" : "ไม่ผ่าน"],
+    const finalSummaryData = [
+      [summaryText, `${managerScore} / 70`, `${isTeamScore} / 70`]
     ];
 
     (doc as any).autoTable({
       startY: yPosition,
       head: [],
-      body: managerBasicData,
-      theme: 'striped',
+      body: finalSummaryData,
+      theme: 'grid',
       columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 50 },
-        1: { cellWidth: 130 }
+        0: { cellWidth: 100, fontStyle: 'bold', fontSize: 8 },
+        1: { cellWidth: 40, halign: 'center', fontStyle: 'bold', fontSize: 10, fillColor: [255, 255, 200] },
+        2: { cellWidth: 40, halign: 'center', fontStyle: 'bold', fontSize: 10, fillColor: [255, 255, 200] }
       },
-      styles: { font: 'Sarabun', fontSize: 10 },
+      bodyStyles: {
+        lineWidth: 0.5,
+        lineColor: [0, 0, 0]
+      },
+      styles: { font: 'Sarabun' },
     });
 
-    yPosition = (doc as any).lastAutoTable.finalY + 8;
+    yPosition = (doc as any).lastAutoTable.finalY + 12;
 
-    // Evaluation Scores
-    if (candidate.interviews.manager.scores) {
-      const scores = candidate.interviews.manager.scores;
-      const evaluationData = [
-        ["ทักษะและความรู้ในงาน", scores.skill_knowledge?.toString() || "-"],
-        ["การสื่อสาร", scores.communication?.toString() || "-"],
-        ["ความคิดสร้างสรรค์", scores.creativity?.toString() || "-"],
-        ["แรงจูงใจ", scores.motivation?.toString() || "-"],
-        ["การทำงานร่วมกับคนอื่น", scores.teamwork?.toString() || "-"],
-        ["การคิดวิเคราะห์และแก้ปัญหา", scores.analytical?.toString() || "-"],
-        ["วัฒนธรรมองค์กร", scores.culture_fit?.toString() || "-"],
-      ];
+    // Comments section
+    if (candidate.interviews?.manager?.feedback || candidate.interviews?.isTeam?.feedback) {
+      // Check if we need a new page for comments
+      if (yPosition > 240) {
+        doc.addPage();
+        yPosition = 20;
+      }
 
-      (doc as any).autoTable({
-        startY: yPosition,
-        head: [["หัวข้อการประเมิน", "คะแนน (1-10)"]],
-        body: evaluationData,
-        theme: 'grid',
-        headStyles: { fillColor: [52, 152, 219], fontSize: 10 },
-        columnStyles: {
-          0: { cellWidth: 130 },
-          1: { cellWidth: 50, halign: 'center' }
-        },
-        styles: { font: 'Sarabun', fontSize: 10 },
-      });
+      doc.setFontSize(12);
+      doc.setTextColor(41, 128, 185);
+      doc.text("ความคิดเห็นเพิ่มเติมของผู้สัมภาษณ์", 14, yPosition);
+      yPosition += 8;
 
-      yPosition = (doc as any).lastAutoTable.finalY + 8;
-    }
-
-    // Comment
-    if (candidate.interviews.manager.feedback) {
       doc.setFontSize(10);
-      doc.text("Comment:", 14, yPosition);
-      yPosition += 6;
-      const splitFeedback = doc.splitTextToSize(candidate.interviews.manager.feedback, 180);
-      doc.text(splitFeedback, 14, yPosition);
-      yPosition += splitFeedback.length * 5 + 12;
-    }
-  }
+      doc.setTextColor(0, 0, 0);
 
-  // Final Interview (IS)
-  if (candidate.interviews?.isTeam) {
-    // Check if we need a new page
-    if (yPosition > 240) {
-      doc.addPage();
-      yPosition = 20;
-    }
+      if (candidate.interviews?.manager?.feedback) {
+        doc.setFont("Sarabun", "bold");
+        doc.text("First Interview (Manager):", 14, yPosition);
+        doc.setFont("Sarabun", "normal");
+        yPosition += 6;
+        const splitManagerFeedback = doc.splitTextToSize(candidate.interviews.manager.feedback, 180);
+        doc.text(splitManagerFeedback, 14, yPosition);
+        yPosition += splitManagerFeedback.length * 5 + 8;
+      }
 
-    doc.setFontSize(14);
-    doc.setTextColor(41, 128, 185);
-    doc.text("Final Interview (IS)", 14, yPosition);
-    yPosition += 8;
-
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    
-    const isTeamBasicData = [
-      ["วันที่สัมภาษณ์", candidate.interviews.isTeam.date || "-"],
-      ["คะแนนรวม", candidate.interviews.isTeam.total_score ? `${candidate.interviews.isTeam.total_score} / 70` : "-"],
-      ["ผลการสัมภาษณ์", candidate.interviews.isTeam.passed ? "ผ่าน" : "ไม่ผ่าน"],
-    ];
-
-    (doc as any).autoTable({
-      startY: yPosition,
-      head: [],
-      body: isTeamBasicData,
-      theme: 'striped',
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 50 },
-        1: { cellWidth: 130 }
-      },
-      styles: { font: 'Sarabun', fontSize: 10 },
-    });
-
-    yPosition = (doc as any).lastAutoTable.finalY + 8;
-
-    // Evaluation Scores
-    if (candidate.interviews.isTeam.scores) {
-      const scores = candidate.interviews.isTeam.scores;
-      const evaluationData = [
-        ["ทักษะและความรู้ในงาน", scores.skill_knowledge?.toString() || "-"],
-        ["การสื่อสาร", scores.communication?.toString() || "-"],
-        ["ความคิดสร้างสรรค์", scores.creativity?.toString() || "-"],
-        ["แรงจูงใจ", scores.motivation?.toString() || "-"],
-        ["การทำงานร่วมกับคนอื่น", scores.teamwork?.toString() || "-"],
-        ["การคิดวิเคราะห์และแก้ปัญหา", scores.analytical?.toString() || "-"],
-        ["วัฒนธรรมองค์กร", scores.culture_fit?.toString() || "-"],
-      ];
-
-      (doc as any).autoTable({
-        startY: yPosition,
-        head: [["หัวข้อการประเมิน", "คะแนน (1-10)"]],
-        body: evaluationData,
-        theme: 'grid',
-        headStyles: { fillColor: [52, 152, 219], fontSize: 10 },
-        columnStyles: {
-          0: { cellWidth: 130 },
-          1: { cellWidth: 50, halign: 'center' }
-        },
-        styles: { font: 'Sarabun', fontSize: 10 },
-      });
-
-      yPosition = (doc as any).lastAutoTable.finalY + 8;
-    }
-
-    // Comment
-    if (candidate.interviews.isTeam.feedback) {
-      doc.setFontSize(10);
-      doc.text("Comment:", 14, yPosition);
-      yPosition += 6;
-      const splitFeedback = doc.splitTextToSize(candidate.interviews.isTeam.feedback, 180);
-      doc.text(splitFeedback, 14, yPosition);
+      if (candidate.interviews?.isTeam?.feedback) {
+        doc.setFont("Sarabun", "bold");
+        doc.text("Final Interview (IS):", 14, yPosition);
+        doc.setFont("Sarabun", "normal");
+        yPosition += 6;
+        const splitISFeedback = doc.splitTextToSize(candidate.interviews.isTeam.feedback, 180);
+        doc.text(splitISFeedback, 14, yPosition);
+      }
     }
   }
 
