@@ -154,7 +154,7 @@ const JobApplication = () => {
   ]);
  
   useEffect(() => {
-    const state = location.state as { jobTitle?: string } | null;
+    const state = location.state as { jobId?: string; jobTitle?: string } | null;
     if (state?.jobTitle) {
       setFormData(prev => ({ ...prev, position: state.jobTitle }));
       setAvailablePositions(prev =>
