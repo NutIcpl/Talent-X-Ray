@@ -165,12 +165,6 @@ export function JobDetailDialog({ job, open, onOpenChange, onEdit, onDelete, onV
             <div className="text-sm text-muted-foreground">
               เปิดรับสมัครเมื่อ: {job.postedDate}
             </div>
-            <div className="flex items-center gap-2">
-              <div className="text-sm text-muted-foreground">Avg Score:</div>
-              <div className="inline-flex items-center justify-center h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary/80 text-white font-bold shadow-sm">
-                {job.avgScore}
-              </div>
-            </div>
           </div>
         </div>
 
