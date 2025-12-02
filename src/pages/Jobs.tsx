@@ -40,6 +40,10 @@ export default function Jobs() {
     navigate("/candidates");
   };
 
+  const handleApplyJob = (jobId: string, jobTitle: string) => {
+    navigate("/job-application", { state: { jobId, jobTitle } });
+  };
+
   // Get unique departments and locations for filters
   const departments = useMemo(() => {
     const depts = new Set(positions.map(job => job.department));
@@ -101,17 +105,20 @@ export default function Jobs() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          ตำแหน่งงาน
-        </h1>
-        <p className="text-muted-foreground">
-          จัดการตำแหน่งงานที่เปิดรับสมัครทั้งหมด
-        </p>
+      <div className="relative">
+        <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent blur-2xl opacity-50" />
+        <div className="relative">
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary via-accent to-primary/60 bg-clip-text text-transparent animate-in fade-in slide-in-from-bottom-4 duration-700">
+            ตำแหน่งงาน
+          </h1>
+          <p className="text-muted-foreground text-lg animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
+            จัดการตำแหน่งงานที่เปิดรับสมัครทั้งหมด
+          </p>
+        </div>
       </div>
 
       {/* Search and Filter Section */}
-      <Card className="border-border/50">
+      <Card className="border-border/50 shadow-sm hover:shadow-md transition-shadow duration-300 bg-gradient-to-br from-background to-muted/20">
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
@@ -175,20 +182,26 @@ export default function Jobs() {
       <div className="grid gap-4">
         {transformedJobs.length > 0 ? (
           transformedJobs.map((job) => (
-          <Card key={job.id} className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/20">
-            <CardHeader className="pb-3">
+          <Card key={job.id} className="group relative overflow-hidden hover:shadow-xl transition-all duration-500 border-border/50 hover:border-primary/30 bg-gradient-to-br from-background via-background to-muted/10">
+            {/* Decorative gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            <CardHeader className="pb-3 relative">
               <div className="flex items-start justify-between">
                 <div className="space-y-2 flex-1">
                   <div className="flex items-center justify-between gap-4">
-                    <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                    <CardTitle className="text-2xl font-bold group-hover:text-primary transition-colors duration-300 group-hover:translate-x-1 transform">
                       {job.title}
                     </CardTitle>
                     <div className="flex items-center gap-3">
-                      <Badge variant={job.status === "open" ? "default" : "secondary"}>
-                        {job.status === "open" ? "เปิดรับสมัคร" : "ปิดรับสมัคร"}
+                      <Badge 
+                        variant={job.status === "open" ? "default" : "secondary"}
+                        className="shadow-sm group-hover:shadow-md transition-shadow"
+                      >
+                        {job.status === "open" ? "🎯 เปิดรับสมัคร" : "⏸️ ปิดรับสมัคร"}
                       </Badge>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">สถานะ</span>
+                      <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-1.5">
+                        <span className="text-sm text-muted-foreground font-medium">สถานะ</span>
                         <Switch
                           checked={job.status === "open"}
                           onCheckedChange={() => handleToggleStatus(job.id, job.status)}
@@ -197,57 +210,58 @@ export default function Jobs() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Briefcase className="h-4 w-4" />
-                      <span>{job.department}</span>
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    <div className="flex items-center gap-1.5 bg-muted/30 rounded-full px-3 py-1.5 hover:bg-muted/50 transition-colors">
+                      <Briefcase className="h-4 w-4 text-primary" />
+                      <span className="font-medium">{job.department}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{job.location}</span>
+                    <div className="flex items-center gap-1.5 bg-muted/30 rounded-full px-3 py-1.5 hover:bg-muted/50 transition-colors">
+                      <MapPin className="h-4 w-4 text-accent" />
+                      <span className="font-medium">{job.location}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{job.type}</span>
+                    <div className="flex items-center gap-1.5 bg-muted/30 rounded-full px-3 py-1.5 hover:bg-muted/50 transition-colors">
+                      <Clock className="h-4 w-4 text-primary/70" />
+                      <span className="font-medium">{job.type}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative">
               <div className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">ผู้สมัคร</p>
-                    <p className="font-semibold text-lg">{job.applicants}</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-3 hover:scale-105 transition-transform duration-300">
+                    <p className="text-xs text-muted-foreground font-medium mb-1">จำนวนผู้สมัคร</p>
+                    <p className="font-bold text-2xl text-primary">{job.applicants}</p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">เงินเดือน</p>
-                    <p className="font-semibold">{job.salaryRange}</p>
+                  <div className="bg-gradient-to-br from-accent/10 to-accent/5 rounded-lg p-3 hover:scale-105 transition-transform duration-300">
+                    <p className="text-xs text-muted-foreground font-medium mb-1">เงินเดือน</p>
+                    <p className="font-semibold text-sm">{job.salaryRange}</p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">จำนวนอัตรา</p>
+                  <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-3 hover:scale-105 transition-transform duration-300">
+                    <p className="text-xs text-muted-foreground font-medium mb-1">จำนวนอัตรา</p>
                     <p className="font-semibold">{job.numberOfPositions}</p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">ประกาศเมื่อ</p>
-                    <p className="font-semibold">{job.postedDate}</p>
+                  <div className="bg-gradient-to-br from-muted/50 to-muted/30 rounded-lg p-3 hover:scale-105 transition-transform duration-300">
+                    <p className="text-xs text-muted-foreground font-medium mb-1">ประกาศเมื่อ</p>
+                    <p className="font-semibold text-sm">{job.postedDate}</p>
                   </div>
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-2">
                   <Button
                     variant="default"
                     onClick={() => handleViewDetails(job)}
-                    className="flex-1"
+                    className="flex-1 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105"
                   >
                     ดูรายละเอียด
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => handleViewCandidates()}
+                    onClick={() => handleApplyJob(job.id, job.title)}
+                    className="min-w-[120px] border-primary/50 hover:bg-primary hover:text-primary-foreground shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105"
                   >
-                    ผู้สมัคร
+                    สมัครงาน
                   </Button>
                 </div>
               </div>
@@ -255,16 +269,20 @@ export default function Jobs() {
           </Card>
         ))
         ) : (
-          <Card>
-            <CardContent className="py-12">
-              <div className="text-center text-muted-foreground">
-                <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">ไม่พบตำแหน่งงาน</p>
-                <p className="text-sm mt-1">
-                  {searchTerm || departmentFilter !== "all" || locationFilter !== "all"
-                    ? "ลองเปลี่ยนเงื่อนไขการค้นหา"
-                    : "ยังไม่มีตำแหน่งงานในระบบ"}
-                </p>
+          <Card className="border-dashed">
+            <CardContent className="py-16">
+              <div className="text-center text-muted-foreground space-y-4 animate-in fade-in duration-500">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted/50">
+                  <Briefcase className="h-10 w-10 opacity-50" />
+                </div>
+                <div>
+                  <p className="text-xl font-semibold mb-2">ไม่พบตำแหน่งงาน</p>
+                  <p className="text-sm">
+                    {searchTerm || departmentFilter !== "all" || locationFilter !== "all"
+                      ? "ลองเปลี่ยนเงื่อนไขการค้นหา หรือล้างตัวกรอง"
+                      : "ยังไม่มีตำแหน่งงานในระบบ"}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
