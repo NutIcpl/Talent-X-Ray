@@ -1,1 +1,13 @@
 project_id = "gapqntgptmrmqwvsqmvz"
+
+[functions.create-user]
+verify_jwt = false
+
+[functions.parse-resume]
+verify_jwt = false
+
+[functions.parse-jd-document]
+verify_jwt = false
+
+[functions.send-email-with-attachments]
+verify_jwt = false

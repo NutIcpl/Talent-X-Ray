@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Clock, CheckCircle, XCircle, Download, Upload, Briefcase, Users, FileText, Award, CalendarDays, Loader2 } from "lucide-react";
+import { Clock, CheckCircle, XCircle, Download, Upload, Briefcase, Users, FileText, Award, CalendarDays, Loader2, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useJobRequisitions, JobRequisition } from "@/hooks/useJobRequisitions";
 import { RequisitionDetailDialog } from "@/components/requisitions/RequisitionDetailDialog";
@@ -16,6 +16,7 @@ import { exportRequisitionsPDF } from "@/lib/exportRequisitionsPDF";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { addSparkleEffect } from "@/lib/sparkle";
+import * as pdfjsLib from "pdfjs-dist";
 
 const JobRequisitions = () => {
   const { toast } = useToast();
@@ -25,6 +26,8 @@ const JobRequisitions = () => {
   const [jdFile, setJdFile] = useState<File | null>(null);
   const [requisitionFormFile, setRequisitionFormFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [parsingJD, setParsingJD] = useState(false);
+  const [parsingReqForm, setParsingReqForm] = useState(false);
   const { requisitions, isLoading, createRequisition } = useJobRequisitions();
 
   const [currentPositions, setCurrentPositions] = useState([
@@ -89,6 +92,137 @@ const JobRequisitions = () => {
   ];
 
   const workLocations = ["สำนักงานใหญ่ สุรวงศ์", "โรงงานนครปฐม"];
+
+  // Set up PDF.js worker
+  useEffect(() => {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+  }, []);
+
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = "";
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(" ");
+        fullText += pageText + "\n";
+      }
+
+      return fullText;
+    } catch (error) {
+      console.error("Error extracting text from PDF:", error);
+      throw new Error("ไม่สามารถอ่านไฟล์ PDF ได้");
+    }
+  };
+
+  const parseJDWithAI = async () => {
+    if (!jdFile) return;
+
+    setParsingJD(true);
+    try {
+      toast({ title: "กำลัง Parse JD ด้วย AI...", description: "กรุณารอสักครู่" });
+
+      const documentText = await extractTextFromPDF(jdFile);
+
+      const { data: functionData, error: functionError } = await supabase.functions.invoke("parse-jd-document", {
+        body: { documentText, documentType: "jd" },
+      });
+
+      if (functionError) throw functionError;
+
+      if (functionData.success && functionData.data) {
+        const parsed = functionData.data;
+        
+        // Auto-fill form with parsed data
+        setFormData(prev => ({
+          ...prev,
+          ...(parsed.position && { position: parsed.position }),
+          ...(parsed.department && { department: parsed.department }),
+          ...(parsed.job_grade && { job_grade: parsed.job_grade }),
+          ...(parsed.work_location && { work_location: parsed.work_location }),
+          ...(parsed.reports_to && { reports_to: parsed.reports_to }),
+          ...(parsed.job_duties && { job_duties: parsed.job_duties }),
+          ...(parsed.gender && { gender: parsed.gender }),
+          ...(parsed.max_age && { max_age: parsed.max_age }),
+          ...(parsed.min_education && { min_education: parsed.min_education }),
+          ...(parsed.field_of_study && { field_of_study: parsed.field_of_study }),
+          ...(parsed.min_experience && { min_experience: parsed.min_experience }),
+          ...(parsed.experience_in && { experience_in: parsed.experience_in }),
+          ...(parsed.other_skills && { other_skills: parsed.other_skills }),
+          ...(parsed.marital_status && { marital_status: parsed.marital_status }),
+        }));
+
+        toast({ 
+          title: "Parse JD สำเร็จ!", 
+          description: "ข้อมูลถูกนำเข้าฟอร์มอัตโนมัติแล้ว" 
+        });
+      } else {
+        throw new Error(functionData.error || "Failed to parse JD");
+      }
+    } catch (error: any) {
+      console.error("Error parsing JD:", error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: error.message || "ไม่สามารถ Parse JD ได้",
+        variant: "destructive",
+      });
+    } finally {
+      setParsingJD(false);
+    }
+  };
+
+  const parseRequisitionFormWithAI = async () => {
+    if (!requisitionFormFile) return;
+
+    setParsingReqForm(true);
+    try {
+      toast({ title: "กำลัง Parse ใบขออัตราด้วย AI...", description: "กรุณารอสักครู่" });
+
+      const documentText = await extractTextFromPDF(requisitionFormFile);
+
+      const { data: functionData, error: functionError } = await supabase.functions.invoke("parse-jd-document", {
+        body: { documentText, documentType: "requisition_form" },
+      });
+
+      if (functionError) throw functionError;
+
+      if (functionData.success && functionData.data) {
+        const parsed = functionData.data;
+        
+        // Auto-fill form with parsed data
+        setFormData(prev => ({
+          ...prev,
+          ...(parsed.position && { position: parsed.position }),
+          ...(parsed.department && { department: parsed.department }),
+          ...(parsed.work_location && { work_location: parsed.work_location }),
+          ...(parsed.reports_to && { reports_to: parsed.reports_to }),
+          ...(parsed.quantity && { quantity: parsed.quantity.toString() }),
+          ...(parsed.justification && { justification: parsed.justification }),
+          ...(parsed.hiring_type && { hiring_type: parsed.hiring_type as any }),
+          ...(parsed.job_grade && { job_grade: parsed.job_grade }),
+        }));
+
+        toast({ 
+          title: "Parse ใบขออัตราสำเร็จ!", 
+          description: "ข้อมูลถูกนำเข้าฟอร์มอัตโนมัติแล้ว" 
+        });
+      } else {
+        throw new Error(functionData.error || "Failed to parse requisition form");
+      }
+    } catch (error: any) {
+      console.error("Error parsing requisition form:", error);
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: error.message || "ไม่สามารถ Parse ใบขออัตราได้",
+        variant: "destructive",
+      });
+    } finally {
+      setParsingReqForm(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,18 +390,39 @@ const JobRequisitions = () => {
                         </p>
                       </div>
                       {jdFile && (
-                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg w-full">
-                          <div className="p-1.5 rounded-lg bg-green-100">
-                            <FileText className="h-5 w-5 text-green-600" />
+                        <div className="space-y-2 w-full">
+                          <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg w-full">
+                            <div className="p-1.5 rounded-lg bg-green-100">
+                              <FileText className="h-5 w-5 text-green-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-green-900 text-sm truncate">{jdFile.name}</p>
+                              <p className="text-xs text-green-700">
+                                {(jdFile.size / 1024).toFixed(2)} KB
+                              </p>
+                            </div>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => setJdFile(null)}>
+                              <XCircle className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-green-900 text-sm truncate">{jdFile.name}</p>
-                            <p className="text-xs text-green-700">
-                              {(jdFile.size / 1024).toFixed(2)} KB
-                            </p>
-                          </div>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => setJdFile(null)}>
-                            <XCircle className="h-4 w-4" />
+                          <Button
+                            type="button"
+                            onClick={parseJDWithAI}
+                            disabled={parsingJD}
+                            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                            size="sm"
+                          >
+                            {parsingJD ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                กำลัง Parse ด้วย AI...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-4 w-4 mr-2" />
+                                Parse JD ด้วย AI
+                              </>
+                            )}
                           </Button>
                         </div>
                       )}
@@ -317,18 +472,39 @@ const JobRequisitions = () => {
                         </p>
                       </div>
                       {requisitionFormFile && (
-                        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg w-full">
-                          <div className="p-1.5 rounded-lg bg-blue-100">
-                            <FileText className="h-5 w-5 text-blue-600" />
+                        <div className="space-y-2 w-full">
+                          <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg w-full">
+                            <div className="p-1.5 rounded-lg bg-blue-100">
+                              <FileText className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-blue-900 text-sm truncate">{requisitionFormFile.name}</p>
+                              <p className="text-xs text-blue-700">
+                                {(requisitionFormFile.size / 1024).toFixed(2)} KB
+                              </p>
+                            </div>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => setRequisitionFormFile(null)}>
+                              <XCircle className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-blue-900 text-sm truncate">{requisitionFormFile.name}</p>
-                            <p className="text-xs text-blue-700">
-                              {(requisitionFormFile.size / 1024).toFixed(2)} KB
-                            </p>
-                          </div>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => setRequisitionFormFile(null)}>
-                            <XCircle className="h-4 w-4" />
+                          <Button
+                            type="button"
+                            onClick={parseRequisitionFormWithAI}
+                            disabled={parsingReqForm}
+                            className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white"
+                            size="sm"
+                          >
+                            {parsingReqForm ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                กำลัง Parse ด้วย AI...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-4 w-4 mr-2" />
+                                Parse ใบขออัตราด้วย AI
+                              </>
+                            )}
                           </Button>
                         </div>
                       )}
