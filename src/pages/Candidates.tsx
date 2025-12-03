@@ -7,238 +7,100 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Filter, Star, UserPlus } from "lucide-react";
+import { Search, Filter, Star, UserPlus, Loader2 } from "lucide-react";
 import { CandidateDetailDialog } from "@/components/candidates/CandidateDetailDialog";
 import { CandidateFormDialog } from "@/components/candidates/CandidateFormDialog";
 import { SendToManagerDialog } from "@/components/candidates/SendToManagerDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/contexts/NotificationContext";
-import { useCandidates, Candidate } from "@/contexts/CandidatesContext";
+import { useCandidatesData, CandidateData } from "@/hooks/useCandidatesData";
 
-const initialCandidates = [
-  {
-    id: 1,
-    name: "สมชาย ใจดี",
-    position: "Senior Developer",
-    experience: "5 ปี",
-    score: 89,
-    skills: ["React", "Node.js", "TypeScript"],
-    appliedDate: "2 วันที่แล้ว",
-    status: "screening",
-    pipelineStatus: "interview_1",
-    email: "somchai@email.com",
-    phone: "081-234-5678",
-    location: "กรุงเทพมหานคร",
-    education: "ปริญญาตรี วิทยาการคอมพิวเตอร์",
-    summary: "มีประสบการณ์ในการพัฒนา Web Application ด้วย React และ Node.js มากกว่า 5 ปี เคยทำงานในโปรเจกต์ขนาดใหญ่หลายโปรเจกต์",
-    previousCompany: "Tech Solutions Co.",
-    testScores: {
-      hrTest: 85,
-      departmentTest: 92,
-    },
-    interviews: {
-      hr: { date: "15/03/2024", passed: true, feedback: "มีทักษะการสื่อสารที่ดี" },
-      manager: { date: "18/03/2024", passed: true, feedback: "มีความรู้ทางเทคนิคสูง" },
-      isTeam: { date: "20/03/2024", passed: true, feedback: "แก้ปัญหาได้ดีมาก" },
-    },
-  },
-  {
-    id: 2,
-    name: "สมหญิง รักดี",
-    position: "UX Designer",
-    experience: "3 ปี",
-    score: 92,
-    skills: ["Figma", "UI/UX", "Design Systems"],
-    appliedDate: "1 วันที่แล้ว",
-    status: "interview",
-    pipelineStatus: "interview_2",
-    email: "somying@email.com",
-    phone: "082-345-6789",
-    location: "กรุงเทพมหานคร",
-    education: "ปริญญาตรี การออกแบบนิเทศศิลป์",
-    summary: "UX Designer ที่มีความชำนาญในการออกแบบ User Interface และ User Experience สำหรับแอปพลิเคชันและเว็บไซต์",
-    previousCompany: "Design Studio Ltd.",
-    testScores: {
-      hrTest: 88,
-      departmentTest: 95,
-    },
-    interviews: {
-      hr: { date: "10/03/2024", passed: true, feedback: "สร้างสรรค์และมืออาชีพ" },
-      manager: { date: "12/03/2024", passed: true, feedback: "พอร์ตโฟลิโอยอดเยี่ยม" },
-    },
-  },
-  {
-    id: 3,
-    name: "ประเสริฐ วงศ์ดี",
-    position: "Data Scientist",
-    experience: "6 ปี",
-    score: 87,
-    skills: ["Python", "Machine Learning", "SQL"],
-    appliedDate: "3 วันที่แล้ว",
-    status: "screening",
-    pipelineStatus: "pre_screening",
-    email: "prasert@email.com",
-    phone: "083-456-7890",
-    location: "นนทบุรี",
-    education: "ปริญญาโท Data Science",
-    summary: "Data Scientist ที่มีความเชี่ยวชาญในการวิเคราะห์ข้อมูลและสร้างโมเดล Machine Learning เพื่อแก้ปัญหาทางธุรกิจ",
-    previousCompany: "Analytics Corp.",
-  },
-  {
-    id: 4,
-    name: "วิชัย สุขใจ",
-    position: "Product Manager",
-    experience: "4 ปี",
-    score: 84,
-    skills: ["Product Strategy", "Agile", "Analytics"],
-    appliedDate: "4 วันที่แล้ว",
-    status: "shortlisted",
-    pipelineStatus: "offer",
-    email: "wichai@email.com",
-    phone: "084-567-8901",
-    location: "กรุงเทพมหานคร",
-    education: "ปริญญาโท MBA",
-    summary: "Product Manager ที่มีประสบการณ์ในการวางแผนกลยุทธ์ผลิตภัณฑ์และบริหารทีมพัฒนา ทำงานในรูปแบบ Agile",
-    previousCompany: "StartUp XYZ",
-  },
-  {
-    id: 5,
-    name: "นภา ใจงาม",
-    position: "Frontend Developer",
-    experience: "3 ปี",
-    score: 91,
-    skills: ["Vue.js", "CSS", "JavaScript"],
-    appliedDate: "5 วันที่แล้ว",
-    status: "interview",
-    pipelineStatus: "interview_1",
-    email: "napa@email.com",
-    phone: "085-678-9012",
-    location: "ปทุมธานี",
-    education: "ปริญญาตรี วิศวกรรมซอฟต์แวร์",
-    summary: "Frontend Developer ที่เชี่ยวชาญ Vue.js และมีความสนใจในการพัฒนา UI/UX ที่ดี มีประสบการณ์ทำงานกับทีม",
-    previousCompany: "Web Agency Co.",
-  },
-  {
-    id: 6,
-    name: "ธนพล มั่งคั่ง",
-    position: "Backend Developer",
-    experience: "7 ปี",
-    score: 86,
-    skills: ["Java", "Spring Boot", "Microservices"],
-    appliedDate: "1 สัปดาห์ที่แล้ว",
-    status: "screening",
-    pipelineStatus: "pre_screening",
-    email: "thanapol@email.com",
-    phone: "086-789-0123",
-    location: "สมุทรปราการ",
-    education: "ปริญญาตรี วิศวกรรมคอมพิวเตอร์",
-    summary: "Backend Developer ที่มีประสบการณ์สูงในการพัฒนาระบบ Microservices ด้วย Java และ Spring Boot",
-    previousCompany: "Enterprise Solutions Inc.",
-  },
-];
-
-const statusColors = {
-  screening: "bg-blue-100 text-blue-700 border-blue-200",
-  interview: "bg-orange-100 text-orange-700 border-orange-200",
-  shortlisted: "bg-green-100 text-green-700 border-green-200",
-  interested: "bg-purple-100 text-purple-700 border-purple-200",
-  not_interested: "bg-gray-100 text-gray-700 border-gray-200",
+const stageColors: Record<string, string> = {
+  New: "bg-blue-100 text-blue-700 border-blue-200",
+  Screening: "bg-orange-100 text-orange-700 border-orange-200",
+  Interview: "bg-purple-100 text-purple-700 border-purple-200",
+  Offer: "bg-green-100 text-green-700 border-green-200",
+  Hired: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  Rejected: "bg-gray-100 text-gray-700 border-gray-200",
 };
 
-const statusLabels = {
-  screening: "Screening",
-  interview: "Interview",
-  shortlisted: "Shortlisted",
-  interested: "Interested",
-  not_interested: "Not Interested",
+const stageLabels: Record<string, string> = {
+  New: "New",
+  Screening: "Screening",
+  Interview: "Interview",
+  Offer: "Offer",
+  Hired: "Hired",
+  Rejected: "Rejected",
 };
 
 export default function Candidates() {
   const { toast } = useToast();
   const { addNotification } = useNotifications();
-  const { candidates, updateCandidate, deleteCandidate } = useCandidates();
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
-  const [editingCandidate, setEditingCandidate] = useState<Candidate | null>(null);
+  const { candidates, isLoading, updateApplicationStage, formatAppliedDate } = useCandidatesData();
+  
+  const [selectedCandidate, setSelectedCandidate] = useState<CandidateData | null>(null);
+  const [editingCandidate, setEditingCandidate] = useState<CandidateData | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
-  const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
+  const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
   const [isSendToManagerOpen, setIsSendToManagerOpen] = useState(false);
-
-  useEffect(() => {
-    const handlePipelineChange = (event: CustomEvent) => {
-      const { candidateId, newStatus } = event.detail;
-      updateCandidate(candidateId, { pipelineStatus: newStatus });
-      setSelectedCandidate(prev => 
-        prev && prev.id === candidateId 
-          ? { ...prev, pipelineStatus: newStatus }
-          : prev
-      );
-    };
-
-    window.addEventListener('pipelineStatusChange' as any, handlePipelineChange);
-    return () => {
-      window.removeEventListener('pipelineStatusChange' as any, handlePipelineChange);
-    };
-  }, [updateCandidate]);
 
   // Get unique positions for filter
   const uniquePositions = useMemo(() => {
-    return Array.from(new Set(candidates.map(c => c.position))).sort();
+    const positions = candidates
+      .map(c => c.position_title)
+      .filter((p): p is string => !!p);
+    return Array.from(new Set(positions)).sort();
   }, [candidates]);
 
   const filteredCandidates = candidates.filter(candidate => {
     const matchesSearch = candidate.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      candidate.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      candidate.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()));
+      (candidate.position_title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (candidate.email?.toLowerCase() || '').includes(searchQuery.toLowerCase());
     
-    const matchesPosition = selectedPositions.length === 0 || selectedPositions.includes(candidate.position);
+    const matchesPosition = selectedPositions.length === 0 || 
+      (candidate.position_title && selectedPositions.includes(candidate.position_title));
 
     let matchesTab = true;
+    const stage = candidate.stage || "New";
     if (activeTab === "all") matchesTab = true;
-    else if (activeTab === "shortlist") matchesTab = candidate.status === "shortlisted";
-    else if (activeTab === "interested") matchesTab = candidate.status === "interested";
-    else if (activeTab === "not_interested") matchesTab = candidate.status === "not_interested";
+    else if (activeTab === "screening") matchesTab = stage === "Screening";
+    else if (activeTab === "interview") matchesTab = stage === "Interview";
+    else if (activeTab === "offer") matchesTab = stage === "Offer" || stage === "Hired";
     
     return matchesSearch && matchesPosition && matchesTab;
   });
 
-  const handleViewDetails = (candidate: Candidate) => {
+  const handleViewDetails = (candidate: CandidateData) => {
     setSelectedCandidate(candidate);
     setIsDetailOpen(true);
   };
 
-  const handleEdit = (candidate: Candidate) => {
+  const handleEdit = (candidate: CandidateData) => {
     setIsDetailOpen(false);
     setEditingCandidate(candidate);
     setIsFormOpen(true);
   };
 
-  const handleDeleteCandidate = (candidateId: number) => {
-    const candidate = candidates.find(c => c.id === candidateId);
-    deleteCandidate(candidateId);
-    setIsDetailOpen(false);
+  const handleDeleteCandidate = (candidateId: string) => {
     toast({
-      title: "ลบผู้สมัครแล้ว",
-      description: `ลบข้อมูล ${candidate?.name} เรียบร้อยแล้ว`,
+      title: "ไม่สามารถลบได้",
+      description: "ฟังก์ชันนี้ยังไม่เปิดใช้งาน",
       variant: "destructive",
     });
   };
 
-  const handleInterviewUpdate = (candidateId: number, interviews: any) => {
-    updateCandidate(candidateId, { interviews } as any);
-    setSelectedCandidate(prev => prev ? { ...prev, interviews } : null);
+  const handleInterviewUpdate = (candidateId: string, interviews: any) => {
     toast({
       title: "บันทึกข้อมูลแล้ว",
       description: "แก้ไขข้อมูลการสัมภาษณ์เรียบร้อยแล้ว",
     });
   };
 
-  const handleTestScoreUpdate = (candidateId: number, testScores: any) => {
-    updateCandidate(candidateId, { testScores } as any);
-    setSelectedCandidate(prev => prev ? { ...prev, testScores } : null);
+  const handleTestScoreUpdate = (candidateId: string, testScores: any) => {
     toast({
       title: "บันทึกข้อมูลแล้ว",
       description: "แก้ไขคะแนนทดสอบเรียบร้อยแล้ว",
@@ -246,20 +108,10 @@ export default function Candidates() {
   };
 
   const handleSave = (candidateData: any) => {
-    if (candidateData.id) {
-      // Edit existing candidate
-      updateCandidate(candidateData.id, candidateData);
-      toast({
-        title: "บันทึกข้อมูลแล้ว",
-        description: "แก้ไขข้อมูลผู้สมัครเรียบร้อยแล้ว",
-      });
-    } else {
-      // Add new candidate - handled by context
-      toast({
-        title: "เพิ่มผู้สมัครแล้ว",
-        description: "เพิ่มข้อมูลผู้สมัครเรียบร้อยแล้ว",
-      });
-    }
+    toast({
+      title: "บันทึกข้อมูลแล้ว",
+      description: "แก้ไขข้อมูลผู้สมัครเรียบร้อยแล้ว",
+    });
     setEditingCandidate(null);
   };
 
@@ -268,33 +120,28 @@ export default function Candidates() {
     setIsFormOpen(true);
   };
 
-  const handleStatusChange = (candidateId: number, status: string) => {
+  const handleStatusChange = (candidateId: string, stage: string) => {
     const candidate = candidates.find(c => c.id === candidateId);
     
-    updateCandidate(candidateId, { status: status as Candidate['status'] });
-    setSelectedCandidate(prev => prev ? { ...prev, status: status as Candidate['status'] } : null);
-    
-    const statusLabelsMap: Record<string, string> = {
-      shortlisted: "Shortlist",
-      interested: "Interested",
-      not_interested: "Not interested",
-    };
-    
-    if (candidate) {
-      addNotification({
-        type: 'status_change',
-        title: 'เปลี่ยนสถานะผู้สมัคร',
-        description: `ย้าย ${candidate.name} ไปยังแท็บ ${statusLabelsMap[status]}`,
-        candidateName: candidate.name,
-        oldStatus: statusLabels[candidate.status as keyof typeof statusLabels],
-        newStatus: statusLabelsMap[status],
+    if (candidate?.application_id) {
+      updateApplicationStage({ applicationId: candidate.application_id, stage });
+      
+      if (candidate) {
+        addNotification({
+          type: 'status_change',
+          title: 'เปลี่ยนสถานะผู้สมัคร',
+          description: `ย้าย ${candidate.name} ไปยัง ${stage}`,
+          candidateName: candidate.name,
+          oldStatus: candidate.stage || "New",
+          newStatus: stage,
+        });
+      }
+      
+      toast({
+        title: "เปลี่ยนสถานะแล้ว",
+        description: `ย้ายไปยัง ${stage} แล้ว`,
       });
     }
-    
-    toast({
-      title: "เปลี่ยนสถานะแล้ว",
-      description: `ย้ายไปยังแท็บ ${statusLabelsMap[status]} แล้ว`,
-    });
   };
 
   const togglePosition = (position: string) => {
@@ -309,7 +156,7 @@ export default function Candidates() {
     setSelectedPositions([]);
   };
 
-  const toggleCandidateSelection = (candidateId: number) => {
+  const toggleCandidateSelection = (candidateId: string) => {
     setSelectedCandidates(prev =>
       prev.includes(candidateId)
         ? prev.filter(id => id !== candidateId)
@@ -323,13 +170,8 @@ export default function Candidates() {
       return;
     }
 
-    const actionMap = {
-      send_to_manager: 'interested',
-      not_interested: 'not_interested'
-    };
-    
     selectedCandidates.forEach(candidateId => {
-      handleStatusChange(candidateId, actionMap[action]);
+      handleStatusChange(candidateId, 'Rejected');
     });
     
     setSelectedCandidates([]);
@@ -339,6 +181,14 @@ export default function Candidates() {
     });
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -347,7 +197,7 @@ export default function Candidates() {
             ผู้สมัคร
           </h1>
           <p className="text-muted-foreground">
-            จัดการและติดตามสถานะผู้สมัครทั้งหมด
+            จัดการและติดตามสถานะผู้สมัครทั้งหมด ({candidates.length} คน)
           </p>
         </div>
         <Button onClick={handleAddNew}>
@@ -404,6 +254,9 @@ export default function Candidates() {
                     </label>
                   </div>
                 ))}
+                {uniquePositions.length === 0 && (
+                  <p className="text-sm text-muted-foreground">ไม่มีตำแหน่ง</p>
+                )}
               </div>
             </div>
           </PopoverContent>
@@ -413,77 +266,86 @@ export default function Candidates() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full justify-start">
           <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="shortlist">Shortlist</TabsTrigger>
-          <TabsTrigger value="interested">Interested</TabsTrigger>
-          <TabsTrigger value="not_interested">Not interested</TabsTrigger>
+          <TabsTrigger value="screening">Screening</TabsTrigger>
+          <TabsTrigger value="interview">Interview</TabsTrigger>
+          <TabsTrigger value="offer">Offer/Hired</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-6">
           <div className="grid gap-4">
-            {filteredCandidates.map((candidate) => (
-          <Card key={candidate.id} className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4 flex-1">
-                  <Checkbox
-                    checked={selectedCandidates.includes(candidate.id)}
-                    onCheckedChange={() => toggleCandidateSelection(candidate.id)}
-                    className="mt-1"
-                  />
-                  <Avatar className="h-14 w-14 border-2 border-primary/40 shadow-sm">
-                    <AvatarImage src={candidate.photoUrl} alt={candidate.name} />
-                    <AvatarFallback>
-                      {candidate.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="relative">
-                    <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-xl shadow-primary">
-                      {candidate.score}
-                    </div>
-                    {candidate.score >= 90 && (
-                      <div className="absolute -top-1 -right-1 h-5 w-5 bg-yellow-400 rounded-full flex items-center justify-center">
-                        <Star className="h-3 w-3 text-white fill-white" />
+            {filteredCandidates.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">ไม่พบผู้สมัคร</p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredCandidates.map((candidate) => (
+                <Card key={candidate.id} className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/20">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 flex-1">
+                        <Checkbox
+                          checked={selectedCandidates.includes(candidate.id)}
+                          onCheckedChange={() => toggleCandidateSelection(candidate.id)}
+                          className="mt-1"
+                        />
+                        <Avatar className="h-14 w-14 border-2 border-primary/40 shadow-sm">
+                          <AvatarImage src={candidate.photo_url || undefined} alt={candidate.name} />
+                          <AvatarFallback>
+                            {candidate.name.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="relative">
+                          <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-xl shadow-primary">
+                            {candidate.ai_fit_score || "-"}
+                          </div>
+                          {candidate.ai_fit_score && candidate.ai_fit_score >= 90 && (
+                            <div className="absolute -top-1 -right-1 h-5 w-5 bg-yellow-400 rounded-full flex items-center justify-center">
+                              <Star className="h-3 w-3 text-white fill-white" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
+                              {candidate.name}
+                            </h3>
+                            <Badge className={stageColors[candidate.stage || "New"] || stageColors.New}>
+                              {stageLabels[candidate.stage || "New"] || candidate.stage || "New"}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                            <span className="font-medium text-foreground">{candidate.position_title || "ไม่ระบุตำแหน่ง"}</span>
+                            <span>•</span>
+                            <span>สมัครเมื่อ: {formatAppliedDate(candidate.applied_at)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="text-xs font-normal">
+                              {candidate.source}
+                            </Badge>
+                            {candidate.email && (
+                              <Badge variant="outline" className="text-xs font-normal">
+                                {candidate.email}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
-                        {candidate.name}
-                      </h3>
-                      <Badge className={statusColors[candidate.status as keyof typeof statusColors]}>
-                        {statusLabels[candidate.status as keyof typeof statusLabels]}
-                      </Badge>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          className="hover:bg-accent transition-colors"
+                          onClick={() => handleViewDetails(candidate)}
+                        >
+                          ดูรายละเอียด
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                      <span className="font-medium text-foreground">{candidate.position}</span>
-                      <span>•</span>
-                      <span>{candidate.experience}</span>
-                      <span>•</span>
-                      <span>สมัครเมื่อ: {candidate.appliedDate}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {candidate.skills.map((skill, i) => (
-                        <Badge key={i} variant="outline" className="text-xs font-normal">
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    className="hover:bg-accent transition-colors"
-                    onClick={() => handleViewDetails(candidate)}
-                  >
-                    ดูรายละเอียด
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
       </Tabs>
@@ -527,18 +389,18 @@ export default function Candidates() {
       )}
 
       <CandidateDetailDialog
-        candidate={selectedCandidate}
+        candidate={selectedCandidate as any}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
         onEdit={() => handleEdit(selectedCandidate!)}
         onDelete={() => selectedCandidate && handleDeleteCandidate(selectedCandidate.id)}
-        onInterviewUpdate={handleInterviewUpdate}
-        onTestScoreUpdate={handleTestScoreUpdate}
-        onStatusChange={handleStatusChange}
+        onInterviewUpdate={handleInterviewUpdate as any}
+        onTestScoreUpdate={handleTestScoreUpdate as any}
+        onStatusChange={handleStatusChange as any}
       />
 
       <CandidateFormDialog
-        candidate={editingCandidate}
+        candidate={editingCandidate as any}
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         onSave={handleSave}
@@ -550,16 +412,16 @@ export default function Candidates() {
         candidates={selectedCandidates.map(id => {
           const candidate = candidates.find(c => c.id === id);
           return {
-            id,
+            id: id as any,
             name: candidate?.name || '',
-            position: candidate?.position || '',
-            score: candidate?.score,
-            preScreenComment: candidate?.interviews?.hr?.feedback
+            position: candidate?.position_title || '',
+            score: candidate?.ai_fit_score || undefined,
+            resumeUrl: candidate?.resume_url || undefined,
           };
         })}
         onSent={() => {
           selectedCandidates.forEach(candidateId => {
-            handleStatusChange(candidateId, 'interested');
+            handleStatusChange(candidateId, 'Interview');
           });
           setSelectedCandidates([]);
         }}
