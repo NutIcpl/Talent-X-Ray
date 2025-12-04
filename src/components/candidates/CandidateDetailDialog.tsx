@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { 
@@ -15,12 +15,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Mail, Phone, MapPin, Calendar, Briefcase, GraduationCap, Star, FileText, Edit, Trash2, CheckCircle2, Circle, Heart, X, Download } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Briefcase, GraduationCap, Star, FileText, Edit, Trash2, CheckCircle2, Circle, Heart, X, Download, User, Home, AlertCircle } from "lucide-react";
 import { SingleInterviewDialog } from "./SingleInterviewDialog";
 import { CombinedInterviewDialog } from "./CombinedInterviewDialog";
 import { TestScoreDialog } from "./TestScoreDialog";
 import { ResumeDialog } from "./ResumeDialog";
 import { exportCandidateEvaluationPDF } from "@/lib/exportCandidateEvaluationPDF";
+import { useCandidateDetails } from "@/hooks/useCandidateDetails";
 
 interface CandidateDetailDialogProps {
   candidate: {
@@ -128,6 +129,11 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
   const [combinedInterviewOpen, setCombinedInterviewOpen] = useState(false);
   const [showPipelineConfirm, setShowPipelineConfirm] = useState(false);
   const [selectedPipelineStep, setSelectedPipelineStep] = useState<string | null>(null);
+  
+  // Fetch candidate details from candidate_details table
+  const { data: candidateDetails, isLoading: detailsLoading } = useCandidateDetails(
+    candidate?.id?.toString() || null
+  );
   
   if (!candidate) return null;
 
@@ -353,16 +359,32 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                   <span>{candidate.email}</span>
                 </div>
               )}
-              {candidate.phone && (
+              {(candidate.phone || candidateDetails?.mobile_phone) && (
                 <div className="flex items-center gap-3 text-sm">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{candidate.phone}</span>
+                  <span>{candidate.phone || candidateDetails?.mobile_phone}</span>
                 </div>
               )}
-              {candidate.location && (
-                <div className="flex items-center gap-3 text-sm">
+              {(candidate.location || candidateDetails?.present_address) && (
+                <div className="flex items-center gap-3 text-sm col-span-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span>{candidate.location}</span>
+                  <span>
+                    {candidateDetails?.present_address 
+                      ? `${candidateDetails.present_address}${candidateDetails.district ? `, ${candidateDetails.district}` : ''}${candidateDetails.province ? `, ${candidateDetails.province}` : ''}${candidateDetails.zip_code ? ` ${candidateDetails.zip_code}` : ''}`
+                      : candidate.location}
+                  </span>
+                </div>
+              )}
+              {candidateDetails?.birth_date && (
+                <div className="flex items-center gap-3 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span>วันเกิด: {new Date(candidateDetails.birth_date).toLocaleDateString('th-TH')}</span>
+                </div>
+              )}
+              {candidateDetails?.id_card && (
+                <div className="flex items-center gap-3 text-sm">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>บัตรประชาชน: {candidateDetails.id_card}</span>
                 </div>
               )}
             </div>
@@ -377,16 +399,18 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
               <div className="flex items-center gap-3 text-sm">
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
                 <div>
-                  <span className="font-medium">{candidate.position || candidate.position_title || 'ไม่ระบุ'}</span>
-                  {candidate.experience && (
-                    <span className="text-muted-foreground ml-2">• {candidate.experience}</span>
+                  <span className="font-medium">
+                    {candidateDetails?.position || candidate.position || candidate.position_title || 'ไม่ระบุ'}
+                  </span>
+                  {candidateDetails?.expected_salary && (
+                    <span className="text-muted-foreground ml-2">• เงินเดือนที่คาดหวัง: {candidateDetails.expected_salary} บาท</span>
                   )}
                 </div>
               </div>
-              {candidate.education && (
-                <div className="flex items-center gap-3 text-sm">
-                  <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                  <span>{candidate.education}</span>
+              {(candidate.education || candidateDetails?.training_curriculums) && (
+                <div className="flex items-start gap-3 text-sm">
+                  <GraduationCap className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <span className="whitespace-pre-wrap">{candidateDetails?.training_curriculums || candidate.education}</span>
                 </div>
               )}
               {candidate.previousCompany && (
@@ -400,11 +424,11 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
 
           <Separator />
 
-          {/* Summary */}
+          {/* Summary / Skills */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">ข้อมูลสรุป</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {candidate.summary || 'ไม่มีข้อมูล'}
+            <h3 className="text-lg font-semibold mb-3">ข้อมูลสรุป / ทักษะ</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+              {candidateDetails?.other_skills || candidate.summary || 'ไม่มีข้อมูล'}
             </p>
           </div>
 
