@@ -59,6 +59,191 @@ export type Database = {
           },
         ]
       }
+      candidate_details: {
+        Row: {
+          age: string | null
+          birth_date: string | null
+          blood_type: string | null
+          candidate_id: string
+          color_blindness: string | null
+          computer_skill: boolean | null
+          contagious_disease: string | null
+          created_at: string
+          criminal_record: string | null
+          criminal_record_details: string | null
+          district: string | null
+          driving_car: boolean | null
+          driving_car_license_no: string | null
+          driving_motorcycle: boolean | null
+          driving_motorcycle_license_no: string | null
+          educations: Json | null
+          emergency_address: string | null
+          emergency_name: string | null
+          emergency_phone: string | null
+          emergency_relation: string | null
+          expected_salary: string | null
+          family_members: Json | null
+          first_name: string | null
+          height: string | null
+          id: string
+          id_card: string | null
+          language_skills: Json | null
+          last_name: string | null
+          marital_status: string | null
+          mobile_phone: string | null
+          moo: string | null
+          nickname: string | null
+          number_of_children: string | null
+          other_skills: string | null
+          position: string | null
+          pregnant: string | null
+          present_address: string | null
+          privacy_consent: boolean | null
+          province: string | null
+          relatives_at_icp: string | null
+          relatives_at_icp_details: string | null
+          religion: string | null
+          serious_illness: string | null
+          serious_illness_details: string | null
+          sex: string | null
+          spouse_name: string | null
+          spouse_occupation: string | null
+          sub_district: string | null
+          title_name: string | null
+          training_curriculums: string | null
+          updated_at: string
+          weight: string | null
+          work_experiences: Json | null
+          worked_at_icp_before: string | null
+          worked_at_icp_details: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          age?: string | null
+          birth_date?: string | null
+          blood_type?: string | null
+          candidate_id: string
+          color_blindness?: string | null
+          computer_skill?: boolean | null
+          contagious_disease?: string | null
+          created_at?: string
+          criminal_record?: string | null
+          criminal_record_details?: string | null
+          district?: string | null
+          driving_car?: boolean | null
+          driving_car_license_no?: string | null
+          driving_motorcycle?: boolean | null
+          driving_motorcycle_license_no?: string | null
+          educations?: Json | null
+          emergency_address?: string | null
+          emergency_name?: string | null
+          emergency_phone?: string | null
+          emergency_relation?: string | null
+          expected_salary?: string | null
+          family_members?: Json | null
+          first_name?: string | null
+          height?: string | null
+          id?: string
+          id_card?: string | null
+          language_skills?: Json | null
+          last_name?: string | null
+          marital_status?: string | null
+          mobile_phone?: string | null
+          moo?: string | null
+          nickname?: string | null
+          number_of_children?: string | null
+          other_skills?: string | null
+          position?: string | null
+          pregnant?: string | null
+          present_address?: string | null
+          privacy_consent?: boolean | null
+          province?: string | null
+          relatives_at_icp?: string | null
+          relatives_at_icp_details?: string | null
+          religion?: string | null
+          serious_illness?: string | null
+          serious_illness_details?: string | null
+          sex?: string | null
+          spouse_name?: string | null
+          spouse_occupation?: string | null
+          sub_district?: string | null
+          title_name?: string | null
+          training_curriculums?: string | null
+          updated_at?: string
+          weight?: string | null
+          work_experiences?: Json | null
+          worked_at_icp_before?: string | null
+          worked_at_icp_details?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          age?: string | null
+          birth_date?: string | null
+          blood_type?: string | null
+          candidate_id?: string
+          color_blindness?: string | null
+          computer_skill?: boolean | null
+          contagious_disease?: string | null
+          created_at?: string
+          criminal_record?: string | null
+          criminal_record_details?: string | null
+          district?: string | null
+          driving_car?: boolean | null
+          driving_car_license_no?: string | null
+          driving_motorcycle?: boolean | null
+          driving_motorcycle_license_no?: string | null
+          educations?: Json | null
+          emergency_address?: string | null
+          emergency_name?: string | null
+          emergency_phone?: string | null
+          emergency_relation?: string | null
+          expected_salary?: string | null
+          family_members?: Json | null
+          first_name?: string | null
+          height?: string | null
+          id?: string
+          id_card?: string | null
+          language_skills?: Json | null
+          last_name?: string | null
+          marital_status?: string | null
+          mobile_phone?: string | null
+          moo?: string | null
+          nickname?: string | null
+          number_of_children?: string | null
+          other_skills?: string | null
+          position?: string | null
+          pregnant?: string | null
+          present_address?: string | null
+          privacy_consent?: boolean | null
+          province?: string | null
+          relatives_at_icp?: string | null
+          relatives_at_icp_details?: string | null
+          religion?: string | null
+          serious_illness?: string | null
+          serious_illness_details?: string | null
+          sex?: string | null
+          spouse_name?: string | null
+          spouse_occupation?: string | null
+          sub_district?: string | null
+          title_name?: string | null
+          training_curriculums?: string | null
+          updated_at?: string
+          weight?: string | null
+          work_experiences?: Json | null
+          worked_at_icp_before?: string | null
+          worked_at_icp_details?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_details_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       candidates: {
         Row: {
           ai_fit_score: number | null
