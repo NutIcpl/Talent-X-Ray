@@ -585,6 +585,91 @@ const JobApplication = () => {
         candidateId = newCandidate.id;
       }
 
+      // Save all form details to candidate_details table
+      const candidateDetailsData = {
+        candidate_id: candidateId,
+        position: formData.position,
+        expected_salary: formData.expectedSalary,
+        title_name: formData.titleName,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        nickname: formData.nickname,
+        present_address: formData.presentAddress,
+        moo: formData.moo,
+        district: formData.district,
+        sub_district: formData.subDistrict,
+        province: formData.province,
+        zip_code: formData.zipCode,
+        mobile_phone: formData.mobilePhone,
+        birth_date: formData.birthDate || null,
+        age: formData.age,
+        id_card: formData.idCard,
+        sex: formData.sex,
+        blood_type: formData.bloodType,
+        religion: formData.religion,
+        height: formData.height,
+        weight: formData.weight,
+        marital_status: formData.maritalStatus,
+        spouse_name: formData.spouseName,
+        spouse_occupation: formData.spouseOccupation,
+        number_of_children: formData.numberOfChildren,
+        emergency_name: formData.emergencyName,
+        emergency_relation: formData.emergencyRelation,
+        emergency_address: formData.emergencyAddress,
+        emergency_phone: formData.emergencyPhone,
+        computer_skill: formData.computerSkill,
+        driving_car: formData.drivingCar,
+        driving_car_license_no: formData.drivingCarLicenseNo,
+        driving_motorcycle: formData.drivingMotorcycle,
+        driving_motorcycle_license_no: formData.drivingMotorcycleLicenseNo,
+        other_skills: formData.otherSkills,
+        training_curriculums: formData.trainingCurriculums,
+        worked_at_icp_before: formData.workedAtICPBefore,
+        worked_at_icp_details: formData.workedAtICPDetails,
+        relatives_at_icp: formData.relativesAtICP,
+        relatives_at_icp_details: formData.relativesAtICPDetails,
+        criminal_record: formData.criminalRecord,
+        criminal_record_details: formData.criminalRecordDetails,
+        serious_illness: formData.seriousIllness,
+        serious_illness_details: formData.seriousIllnessDetails,
+        color_blindness: formData.colorBlindness,
+        pregnant: formData.pregnant,
+        contagious_disease: formData.contagiousDisease,
+        educations: JSON.parse(JSON.stringify(educations)),
+        work_experiences: JSON.parse(JSON.stringify(workExperiences)),
+        family_members: JSON.parse(JSON.stringify(familyMembers)),
+        language_skills: JSON.parse(JSON.stringify(languageSkills)),
+        privacy_consent: formData.privacyConsent,
+      };
+
+      // Check if details already exist for this candidate
+      const { data: existingDetails } = await supabase
+        .from('candidate_details')
+        .select('id')
+        .eq('candidate_id', candidateId)
+        .maybeSingle();
+
+      if (existingDetails) {
+        // Update existing details
+        const { error: detailsError } = await supabase
+          .from('candidate_details')
+          .update(candidateDetailsData)
+          .eq('id', existingDetails.id);
+
+        if (detailsError) {
+          console.error('Error updating candidate details:', detailsError);
+        }
+      } else {
+        // Insert new details
+        const { error: detailsError } = await supabase
+          .from('candidate_details')
+          .insert(candidateDetailsData);
+
+        if (detailsError) {
+          console.error('Error inserting candidate details:', detailsError);
+        }
+      }
+
       // Also add to context for UI update
       addCandidate({
         name: `${formData.firstName} ${formData.lastName}`,

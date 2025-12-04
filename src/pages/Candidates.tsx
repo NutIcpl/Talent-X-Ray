@@ -411,7 +411,6 @@ export default function Candidates() {
         onOpenChange={setIsSendToManagerOpen}
         candidates={selectedCandidates.map(id => {
           const candidate = candidates.find(c => c.id === id);
-          console.log('Selected candidate:', id, candidate);
           return {
             id: id,
             name: candidate?.name ?? '',
