@@ -49,6 +49,11 @@ export function useCandidatesData() {
               notes,
               status
             )
+          ),
+          candidate_details (
+            position,
+            other_skills,
+            training_curriculums
           )
         `)
         .order("created_at", { ascending: false });
@@ -59,6 +64,7 @@ export function useCandidatesData() {
       return (data || []).map((candidate: any) => {
         const application = candidate.applications?.[0];
         const position = application?.job_positions;
+        const details = candidate.candidate_details?.[0];
         // Get the first interview notes as pre-screen comment
         const preScreenInterview = application?.interviews?.[0];
         
@@ -75,7 +81,8 @@ export function useCandidatesData() {
           updated_at: candidate.updated_at,
           application_id: application?.id || null,
           position_id: application?.position_id || null,
-          position_title: position?.title || null,
+          // Use position from candidate_details first, then from job_positions
+          position_title: details?.position || position?.title || null,
           stage: application?.stage || "New",
           applied_at: candidate.created_at,
           pre_screen_comment: application?.notes || preScreenInterview?.notes || null,
