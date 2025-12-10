@@ -62,6 +62,9 @@ async function getAccessToken(): Promise<string> {
 async function sendEmail(accessToken: string, emailData: EmailRequest, senderEmail: string) {
   const senderRole = emailData.senderRole || 'HR';
   
+  // Count candidates with resume files
+  const candidatesWithResume = emailData.candidates.filter(c => c.resume_url).length;
+  
   const candidatesTableRows = emailData.candidates
     .map((c, index) => {
       const rowBg = index % 2 === 0 ? '#f0fdf4' : '#ffffff';
@@ -136,9 +139,11 @@ async function sendEmail(accessToken: string, emailData: EmailRequest, senderEma
                     </tbody>
                   </table>
                   
-                  ${emailData.candidates.length > 0 && emailData.candidates[0].resume_url ? 
-                    '<p style="margin: 0 0 30px 0; padding: 16px; background-color: #f0fdf4; border-left: 4px solid #10b981; border-radius: 6px; font-size: 14px; color: #065f46;">✅ Resume files ได้แนบไฟล์มาด้วยแล้วค่ะ</p>' 
-                    : ''
+                  ${candidatesWithResume > 0 ? 
+                    `<p style="margin: 0 0 30px 0; padding: 16px; background-color: #f0fdf4; border-left: 4px solid #10b981; border-radius: 6px; font-size: 14px; color: #065f46;">
+                      📎 แนบไฟล์ Resume จำนวน ${candidatesWithResume} ไฟล์
+                    </p>` 
+                    : '<p style="margin: 0 0 30px 0; padding: 16px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px; font-size: 14px; color: #92400e;">⚠️ ไม่มีไฟล์ Resume แนบ</p>'
                   }
                   
                   <!-- Action Button -->
@@ -203,8 +208,15 @@ async function sendEmail(accessToken: string, emailData: EmailRequest, senderEma
   for (const candidate of emailData.candidates) {
     if (candidate.resume_url) {
       try {
-        // Fetch resume file
-        const fileResponse = await fetch(candidate.resume_url);
+        console.log(`Fetching resume for ${candidate.name} from:`, candidate.resume_url);
+        
+        // Fetch resume file with proper headers
+        const fileResponse = await fetch(candidate.resume_url, {
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+          },
+        });
+        
         if (fileResponse.ok) {
           const fileBuffer = await fileResponse.arrayBuffer();
           const base64Content = btoa(
@@ -212,7 +224,11 @@ async function sendEmail(accessToken: string, emailData: EmailRequest, senderEma
           );
           
           // Extract filename from URL or use default
-          const filename = candidate.resume_url.split('/').pop() || `Resume_${candidate.name}.pdf`;
+          let filename = candidate.resume_url.split('/').pop() || `Resume_${candidate.name}.pdf`;
+          // Decode URL-encoded filename
+          filename = decodeURIComponent(filename);
+          
+          console.log(`Successfully attached resume: ${filename} (${fileBuffer.byteLength} bytes)`);
 
           message.message.attachments.push({
             '@odata.type': '#microsoft.graph.fileAttachment',
@@ -220,12 +236,18 @@ async function sendEmail(accessToken: string, emailData: EmailRequest, senderEma
             contentType: 'application/pdf',
             contentBytes: base64Content,
           });
+        } else {
+          console.error(`Failed to fetch resume for ${candidate.name}: ${fileResponse.status} ${fileResponse.statusText}`);
         }
       } catch (error) {
         console.error(`Failed to fetch resume for ${candidate.name}:`, error);
       }
+    } else {
+      console.log(`No resume URL for ${candidate.name}`);
     }
   }
+  
+  console.log(`Total attachments: ${message.message.attachments.length}`);
 
   const sendMailUrl = `https://graph.microsoft.com/v1.0/users/${senderEmail}/sendMail`;
   
@@ -258,6 +280,11 @@ serve(async (req) => {
 
     console.log('Sending email to:', emailData.to);
     console.log('Number of candidates:', emailData.candidates.length);
+    console.log('Candidates data:', JSON.stringify(emailData.candidates.map(c => ({
+      name: c.name,
+      has_resume: !!c.resume_url,
+      resume_url: c.resume_url
+    })), null, 2));
 
     // Get authenticated user's email from the request
     const authHeader = req.headers.get('Authorization');

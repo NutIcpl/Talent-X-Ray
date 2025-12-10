@@ -70,14 +70,30 @@ export function useCandidateDetails(candidateId: string | null) {
     queryFn: async () => {
       if (!candidateId) return null;
       
-      const { data, error } = await supabase
+      // Fetch candidate details
+      const { data: detailsData, error: detailsError } = await supabase
         .from("candidate_details")
         .select("*")
         .eq("candidate_id", candidateId)
         .maybeSingle();
 
-      if (error) throw error;
-      return data as CandidateDetails | null;
+      if (detailsError) throw detailsError;
+
+      // Fetch employment records
+      const { data: employmentData, error: employmentError } = await supabase
+        .from("employment_records")
+        .select("*")
+        .eq("candidate_id", candidateId)
+        .order("created_at", { ascending: false });
+
+      if (employmentError && employmentError.code !== 'PGRST116') {
+        console.error("Error fetching employment records:", employmentError);
+      }
+
+      return {
+        ...detailsData,
+        employment_records: employmentData || [],
+      } as CandidateDetails & { employment_records: any[] };
     },
     enabled: !!candidateId,
   });

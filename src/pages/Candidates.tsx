@@ -16,9 +16,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useCandidatesData, CandidateData } from "@/hooks/useCandidatesData";
 import { useUserRoles } from "@/hooks/useUserRoles";
+import { useCalculateFitScore } from "@/hooks/useCalculateFitScore";
+import { getScoreColor, getScoreLabel } from "@/lib/calculateJobFitScore";
+import { supabase } from "@/integrations/supabase/client";
 
 const stageColors: Record<string, string> = {
-  New: "bg-blue-100 text-blue-700 border-blue-200",
+  Pending: "bg-slate-100 text-slate-700 border-slate-200",
+  Interested: "bg-blue-100 text-blue-700 border-blue-200",
+  Shortlist: "bg-yellow-100 text-yellow-700 border-yellow-200",
   Screening: "bg-orange-100 text-orange-700 border-orange-200",
   Interview: "bg-purple-100 text-purple-700 border-purple-200",
   Offer: "bg-green-100 text-green-700 border-green-200",
@@ -27,7 +32,9 @@ const stageColors: Record<string, string> = {
 };
 
 const stageLabels: Record<string, string> = {
-  New: "New",
+  Pending: "Pending",
+  Interested: "Interested",
+  Shortlist: "Shortlist",
   Screening: "Screening",
   Interview: "Interview",
   Offer: "Offer",
@@ -38,13 +45,47 @@ const stageLabels: Record<string, string> = {
 export default function Candidates() {
   const { toast } = useToast();
   const { addNotification } = useNotifications();
-  const { candidates, isLoading, updateApplicationStage, formatAppliedDate } = useCandidatesData();
+  const { candidates, isLoading, updateApplicationStage, updateCandidateStage, formatAppliedDate } = useCandidatesData();
   const { isManager, isAdmin, isHRManager, isRecruiter, isLoading: rolesLoading } = useUserRoles();
+  const calculateFitScore = useCalculateFitScore();
+  const [calculatingScores, setCalculatingScores] = useState<Set<string>>(new Set());
   
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateData | null>(null);
   const [editingCandidate, setEditingCandidate] = useState<CandidateData | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
+
+  // Auto-calculate scores for candidates without scores
+  useEffect(() => {
+    if (!isLoading && candidates.length > 0) {
+      candidates.forEach((candidate) => {
+        if (
+          !candidate.ai_fit_score &&
+          candidate.application_id &&
+          candidate.job_position_id &&
+          !calculatingScores.has(candidate.id)
+        ) {
+          setCalculatingScores((prev) => new Set(prev).add(candidate.id));
+          calculateFitScore.mutate(
+            {
+              candidateId: candidate.id,
+              applicationId: candidate.application_id,
+              jobPositionId: candidate.job_position_id,
+            },
+            {
+              onSettled: () => {
+                setCalculatingScores((prev) => {
+                  const newSet = new Set(prev);
+                  newSet.delete(candidate.id);
+                  return newSet;
+                });
+              },
+            }
+          );
+        }
+      });
+    }
+  }, [candidates, isLoading]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
@@ -71,11 +112,29 @@ export default function Candidates() {
       (candidate.position_title && selectedPositions.includes(candidate.position_title));
 
     let matchesTab = true;
-    const stage = candidate.stage || "New";
-    if (activeTab === "all") matchesTab = true;
-    else if (activeTab === "screening") matchesTab = stage === "Screening";
-    else if (activeTab === "interview") matchesTab = stage === "Interview";
-    else if (activeTab === "offer") matchesTab = stage === "Offer" || stage === "Hired";
+    const stage = candidate.stage || "Pending";
+    
+    if (activeTab === "all") {
+      matchesTab = true;
+    } else if (activeTab === "shortlist") {
+      matchesTab = stage === "Shortlist";
+    } else if (activeTab === "interested") {
+      matchesTab = stage === "Interested";
+    } else if (activeTab === "not-interested") {
+      matchesTab = stage === "Rejected";
+    } else if (activeTab === "pre-screen") {
+      matchesTab = stage === "Screening";
+    } else if (activeTab === "interview1") {
+      // Interview 1 = Interview stage (first round)
+      matchesTab = stage === "Interview";
+    } else if (activeTab === "interview2") {
+      // Interview 2 = Interview stage (second round) - can be differentiated by interview count if needed
+      matchesTab = stage === "Interview";
+    } else if (activeTab === "offer") {
+      matchesTab = stage === "Offer";
+    } else if (activeTab === "hired") {
+      matchesTab = stage === "Hired";
+    }
     
     return matchesSearch && matchesPosition && matchesTab;
   });
@@ -126,28 +185,44 @@ export default function Candidates() {
     setIsFormOpen(true);
   };
 
-  const handleStatusChange = (candidateId: string, stage: string) => {
-    const candidate = candidates.find(c => c.id === candidateId);
+  const handleStatusChange = (candidateId: string | number, stage: string) => {
+    console.log('handleStatusChange called:', { candidateId, stage });
     
-    if (candidate?.application_id) {
-      updateApplicationStage({ applicationId: candidate.application_id, stage });
-      
-      if (candidate) {
-        addNotification({
-          type: 'status_change',
-          title: 'เปลี่ยนสถานะผู้สมัคร',
-          description: `ย้าย ${candidate.name} ไปยัง ${stage}`,
-          candidateName: candidate.name,
-          oldStatus: candidate.stage || "New",
-          newStatus: stage,
-        });
-      }
-      
+    // Convert candidateId to string for comparison
+    const candidateIdStr = String(candidateId);
+    const candidate = candidates.find(c => c.id === candidateIdStr);
+    
+    if (!candidate) {
+      console.error('Candidate not found:', candidateId);
       toast({
-        title: "เปลี่ยนสถานะแล้ว",
-        description: `ย้ายไปยัง ${stage} แล้ว`,
+        title: "ไม่พบผู้สมัคร",
+        description: "ไม่พบข้อมูลผู้สมัครนี้",
+        variant: "destructive",
       });
+      return;
     }
+
+    // Update stage in candidates table directly
+    updateCandidateStage({ candidateId: candidateIdStr, stage });
+    
+    // Also update application stage if application exists
+    if (candidate.application_id) {
+      updateApplicationStage({ applicationId: candidate.application_id, stage });
+    }
+    
+    addNotification({
+      type: 'status_change',
+      title: 'เปลี่ยนสถานะผู้สมัคร',
+      description: `ย้าย ${candidate.name} ไปยัง ${stage}`,
+      candidateName: candidate.name,
+      oldStatus: candidate.stage || "New",
+      newStatus: stage,
+    });
+    
+    toast({
+      title: "เปลี่ยนสถานะแล้ว",
+      description: `ย้ายไปยัง ${stage} แล้ว`,
+    });
   };
 
   const togglePosition = (position: string) => {
@@ -283,10 +358,15 @@ export default function Candidates() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full justify-start">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="screening">Screening</TabsTrigger>
-          <TabsTrigger value="interview">Interview</TabsTrigger>
-          <TabsTrigger value="offer">Offer/Hired</TabsTrigger>
+          <TabsTrigger value="all">ALL</TabsTrigger>
+          <TabsTrigger value="shortlist">Shortlist</TabsTrigger>
+          <TabsTrigger value="interested">Interested</TabsTrigger>
+          <TabsTrigger value="not-interested">Not Interested</TabsTrigger>
+          <TabsTrigger value="pre-screen">Pre Screen</TabsTrigger>
+          <TabsTrigger value="interview1">Interview 1</TabsTrigger>
+          <TabsTrigger value="interview2">Interview 2</TabsTrigger>
+          <TabsTrigger value="offer">Offer</TabsTrigger>
+          <TabsTrigger value="hired">Hired</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-6">
@@ -314,13 +394,32 @@ export default function Candidates() {
                             {candidate.name.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="relative">
-                          <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-xl shadow-primary">
-                            {candidate.ai_fit_score || "-"}
+                        <div className="relative group/score">
+                          <div className={`h-14 w-14 rounded-xl bg-gradient-to-br ${
+                            candidate.ai_fit_score 
+                              ? getScoreColor(candidate.ai_fit_score)
+                              : calculatingScores.has(candidate.id)
+                              ? 'from-blue-500 to-blue-600 animate-pulse'
+                              : 'from-gray-400 to-gray-500'
+                          } flex items-center justify-center text-white font-bold shadow-lg transition-transform group-hover/score:scale-110`}>
+                            {calculatingScores.has(candidate.id) ? (
+                              <Loader2 className="h-6 w-6 animate-spin" />
+                            ) : candidate.ai_fit_score ? (
+                              <span className="text-xl">{candidate.ai_fit_score}</span>
+                            ) : (
+                              <span className="text-xl">-</span>
+                            )}
                           </div>
                           {candidate.ai_fit_score && candidate.ai_fit_score >= 90 && (
-                            <div className="absolute -top-1 -right-1 h-5 w-5 bg-yellow-400 rounded-full flex items-center justify-center">
+                            <div className="absolute -top-1 -right-1 h-5 w-5 bg-yellow-400 rounded-full flex items-center justify-center animate-pulse">
                               <Star className="h-3 w-3 text-white fill-white" />
+                            </div>
+                          )}
+                          {candidate.ai_fit_score && (
+                            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 opacity-0 group-hover/score:opacity-100 transition-opacity whitespace-nowrap">
+                              <span className="text-xs font-medium text-muted-foreground">
+                                {getScoreLabel(candidate.ai_fit_score)}
+                              </span>
                             </div>
                           )}
                         </div>

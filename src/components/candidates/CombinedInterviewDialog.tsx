@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -13,6 +13,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 const evaluationSchema = z.object({
   // First Interview (Manager)
@@ -329,6 +331,173 @@ export function CombinedInterviewDialog({
     </div>
   );
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    const formValues = form.getValues();
+    
+    // Header
+    doc.setFontSize(16);
+    doc.setTextColor(41, 128, 185);
+    doc.text("แบบประเมินผลการสัมภาษณ์ผู้สมัครงาน", 105, 20, { align: "center" });
+    
+    let yPos = 35;
+    
+    // Candidate Info
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`1. ข้อมูลเบื้องต้องผู้สมัครงาน (HR เป็นผู้กรอก)`, 14, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(10);
+    doc.text(`ชื่อผู้สมัคร: ${candidateName || "-"}`, 14, yPos);
+    yPos += 6;
+    doc.text(`ตำแหน่งที่สมัคร: ${position || "-"}`, 14, yPos);
+    yPos += 12;
+    
+    // Interview Dates
+    doc.setFontSize(11);
+    doc.text("วันที่สัมภาษณ์ (First Interview)", 14, yPos);
+    doc.text("วันที่สัมภาษณ์ (Final Interview)", 110, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(10);
+    const managerDate = formValues.manager_date ? format(formValues.manager_date, "dd/MM/yyyy") : "-";
+    const isDate = formValues.is_date ? format(formValues.is_date, "dd/MM/yyyy") : "-";
+    doc.text(managerDate, 14, yPos);
+    doc.text(isDate, 110, yPos);
+    yPos += 15;
+    
+    // Evaluation Criteria Header
+    doc.setFontSize(12);
+    doc.setTextColor(41, 128, 185);
+    doc.text("2. การประเมิน", 14, yPos);
+    yPos += 8;
+    
+    // Evaluation Table
+    const evaluationData = [
+      [
+        "1. ทักษะและความรู้ในงาน – ความรู้ ทักษะ และประสบการณ์ตรงกับตำแหน่ง",
+        (formValues.manager_skill_knowledge || 0).toString(),
+        (formValues.is_skill_knowledge || 0).toString()
+      ],
+      [
+        "2. การสื่อสาร – พูดชัดเจน น้ำเจ้าง่าย ตอบคำถามตรงประเด็น",
+        (formValues.manager_communication || 0).toString(),
+        (formValues.is_communication || 0).toString()
+      ],
+      [
+        "3. บุคลิกภาพและความมั่นใจ – ดูน่าเชื่อถือ มั่นใจในตัวเอง และเป็นมิตร",
+        (formValues.manager_creativity || 0).toString(),
+        (formValues.is_creativity || 0).toString()
+      ],
+      [
+        "4. ทัศนคติและแรงจูงใจ – แสดงความสนใจและตั้งใจอยากทำงานจริง ๆ",
+        (formValues.manager_motivation || 0).toString(),
+        (formValues.is_motivation || 0).toString()
+      ],
+      [
+        "5. การทำงานร่วมกับคนอื่น – พร้อมร่วมงานกับผู้อื่น เปิดใจและมี Teamwork",
+        (formValues.manager_teamwork || 0).toString(),
+        (formValues.is_teamwork || 0).toString()
+      ],
+      [
+        "6. การคิดวิเคราะห์และแก้ปัญหา – มีวิธีคิดเป็นระบบ รับมือกับสถานการณ์ได้ดี",
+        (formValues.manager_analytical || 0).toString(),
+        (formValues.is_analytical || 0).toString()
+      ],
+      [
+        "7. วัฒนธรรมองค์กร – มีทัศนคติและพฤติกรรมที่เข้ากับค่านิยมขององค์กร",
+        (formValues.manager_culture_fit || 0).toString(),
+        (formValues.is_culture_fit || 0).toString()
+      ],
+    ];
+    
+    (doc as any).autoTable({
+      startY: yPos,
+      head: [["หัวข้อการประเมินผลการสัมภาษณ์", "First Journey", "Final Interview"]],
+      body: evaluationData,
+      theme: 'grid',
+      headStyles: { 
+        fillColor: [255, 255, 153],
+        textColor: [0, 0, 0],
+        fontSize: 9,
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      columnStyles: {
+        0: { cellWidth: 110, fontSize: 8 },
+        1: { cellWidth: 35, halign: 'center', fontSize: 9 },
+        2: { cellWidth: 35, halign: 'center', fontSize: 9 }
+      },
+      styles: { fontSize: 8, cellPadding: 3 },
+    });
+    
+    yPos = (doc as any).lastAutoTable.finalY + 8;
+    
+    // Total Scores
+    const summaryData = [
+      [
+        "รวมคะแนน\n[ เกณฑ์คะแนน ≥ 50 ผ่านเกณฑ์รับเข้าทำงาน, 45-49 สำรองไว้พิจารณา, < 45 ไม่ผ่านการสัมภาษณ์ ]",
+        `${managerTotalScore} / 70`,
+        `${isTotalScore} / 70`
+      ]
+    ];
+    
+    (doc as any).autoTable({
+      startY: yPos,
+      head: [],
+      body: summaryData,
+      theme: 'grid',
+      columnStyles: {
+        0: { cellWidth: 110, fontStyle: 'bold', fontSize: 8 },
+        1: { cellWidth: 35, halign: 'center', fontStyle: 'bold', fontSize: 10, fillColor: [255, 255, 200] },
+        2: { cellWidth: 35, halign: 'center', fontStyle: 'bold', fontSize: 10, fillColor: [255, 255, 200] }
+      },
+      styles: { cellPadding: 3 },
+    });
+    
+    yPos = (doc as any).lastAutoTable.finalY + 12;
+    
+    // Comments
+    if (formValues.manager_feedback || formValues.is_feedback) {
+      if (yPos > 240) {
+        doc.addPage();
+        yPos = 20;
+      }
+      
+      doc.setFontSize(11);
+      doc.setTextColor(41, 128, 185);
+      doc.text("ความคิดเห็นเพิ่มเติมของผู้สัมภาษณ์", 14, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      
+      if (formValues.manager_feedback) {
+        doc.setFont("helvetica", "bold");
+        doc.text("First Interview:", 14, yPos);
+        doc.setFont("helvetica", "normal");
+        yPos += 5;
+        const splitFeedback = doc.splitTextToSize(formValues.manager_feedback, 180);
+        doc.text(splitFeedback, 14, yPos);
+        yPos += splitFeedback.length * 5 + 8;
+      }
+      
+      if (formValues.is_feedback) {
+        doc.setFont("helvetica", "bold");
+        doc.text("Final Interview:", 14, yPos);
+        doc.setFont("helvetica", "normal");
+        yPos += 5;
+        const splitFeedback = doc.splitTextToSize(formValues.is_feedback, 180);
+        doc.text(splitFeedback, 14, yPos);
+      }
+    }
+    
+    // Save PDF
+    const fileName = `Interview_Evaluation_${candidateName?.replace(/\s+/g, '_')}_${new Date().getTime()}.pdf`;
+    doc.save(fileName);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -565,10 +734,26 @@ export function CombinedInterviewDialog({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                ยกเลิก
+                ปิด
               </Button>
-              <Button type="submit">
-                บันทึก
+              <Button 
+                type="button"
+                variant="outline"
+                onClick={handleDownloadPDF}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                ดาวน์โหลดผลประเมิน
+              </Button>
+              <Button 
+                type="submit"
+                className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                บันทึกข้อมูล
               </Button>
             </DialogFooter>
           </form>

@@ -17,6 +17,7 @@ export interface CandidateData {
   // Application data
   application_id: string | null;
   position_id: string | null;
+  job_position_id: string | null;
   position_title: string | null;
   stage: string | null;
   applied_at: string | null;
@@ -75,15 +76,17 @@ export function useCandidatesData() {
           phone: candidate.phone,
           photo_url: candidate.photo_url,
           resume_url: candidate.resume_url,
-          ai_fit_score: candidate.ai_fit_score,
+          ai_fit_score: application?.ai_fit_score || candidate.ai_fit_score,
           source: candidate.source,
           created_at: candidate.created_at,
           updated_at: candidate.updated_at,
           application_id: application?.id || null,
           position_id: application?.position_id || null,
+          job_position_id: application?.position_id || null,
           // Use position from candidate_details first, then from job_positions
           position_title: details?.position || position?.title || null,
-          stage: application?.stage || "New",
+          // Use stage from candidates table first, then from application, default to Pending
+          stage: candidate.stage || application?.stage || "Pending",
           applied_at: candidate.created_at,
           pre_screen_comment: application?.notes || preScreenInterview?.notes || null,
         } as CandidateData;
@@ -100,8 +103,23 @@ export function useCandidatesData() {
           email: updates.email,
           phone: updates.phone,
           ai_fit_score: updates.ai_fit_score,
+          stage: updates.stage,
         })
         .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["candidates-data"] });
+    },
+  });
+
+  const updateCandidateStageMutation = useMutation({
+    mutationFn: async ({ candidateId, stage }: { candidateId: string; stage: string }) => {
+      const { error } = await supabase
+        .from("candidates")
+        .update({ stage })
+        .eq("id", candidateId);
 
       if (error) throw error;
     },
@@ -140,6 +158,7 @@ export function useCandidatesData() {
     refetch,
     updateCandidate: updateCandidateMutation.mutate,
     updateApplicationStage: updateApplicationStageMutation.mutate,
+    updateCandidateStage: updateCandidateStageMutation.mutate,
     formatAppliedDate,
   };
 }

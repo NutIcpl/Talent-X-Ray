@@ -127,22 +127,12 @@ export function JobDetailDialog({ job, open, onOpenChange, onEdit, onDelete, onV
           {/* Job Description */}
           <div>
             <h3 className="font-semibold text-lg mb-3">รายละเอียดงาน</h3>
-            <p className="text-muted-foreground whitespace-pre-line leading-relaxed">{job.description}</p>
-          </div>
-
-          <Separator />
-
-          {/* Responsibilities */}
-          <div>
-            <h3 className="font-semibold text-lg mb-3">หน้าที่ความรับผิดชอบ</h3>
-            <ul className="space-y-2">
-              {job.responsibilities.map((resp, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <CheckCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-muted-foreground">{resp}</span>
-                </li>
-              ))}
-            </ul>
+            <p className="text-muted-foreground whitespace-pre-line leading-relaxed">
+              {job.description
+                .replace(/\*\*เหตุผลในการเปิดรับ:\*\*[\s\S]*$/, '') // Remove justification section
+                .replace(/\*\*หน้าที่และความรับผิดชอบ:\*\*/g, '') // Remove responsibilities header
+                .trim()}
+            </p>
           </div>
 
           <Separator />

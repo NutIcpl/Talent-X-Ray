@@ -243,29 +243,52 @@ export const RequisitionDetailDialog = ({
             </CardContent>
           </Card>
 
-          {/* Job Description File */}
-          {requisition.jd_file_url && (
+          {/* Documents Section */}
+          {(requisition.jd_file_url || requisition.requisition_form_url) && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">เอกสาร Job Description</CardTitle>
+                <CardTitle className="text-base">เอกสารประกอบ</CardTitle>
               </CardHeader>
-              <CardContent>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={async () => {
-                    const { data } = await supabase.storage
-                      .from('job-descriptions')
-                      .createSignedUrl(requisition.jd_file_url!, 60);
-                    if (data?.signedUrl) {
-                      window.open(data.signedUrl, '_blank');
-                    }
-                  }}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  ดาวน์โหลด Job Description
-                  <Download className="h-4 w-4 ml-auto" />
-                </Button>
+              <CardContent className="space-y-3">
+                {/* Job Description File */}
+                {requisition.jd_file_url && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={async () => {
+                      const { data } = await supabase.storage
+                        .from('job-descriptions')
+                        .createSignedUrl(requisition.jd_file_url!, 60);
+                      if (data?.signedUrl) {
+                        window.open(data.signedUrl, '_blank');
+                      }
+                    }}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    ดาวน์โหลด Job Description
+                    <Download className="h-4 w-4 ml-auto" />
+                  </Button>
+                )}
+
+                {/* Requisition Form File */}
+                {requisition.requisition_form_url && (
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={async () => {
+                      const { data } = await supabase.storage
+                        .from('job-descriptions')
+                        .createSignedUrl(requisition.requisition_form_url!, 60);
+                      if (data?.signedUrl) {
+                        window.open(data.signedUrl, '_blank');
+                      }
+                    }}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    ดาวน์โหลดใบขออัตรา
+                    <Download className="h-4 w-4 ml-auto" />
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}

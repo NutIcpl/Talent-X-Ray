@@ -64,6 +64,7 @@ const JobRequisitions = () => {
     job_description_no: "",
     job_grade: "",
     job_duties: "",
+    salary: "",
     gender: "",
     max_age: "",
     min_experience: "",
@@ -119,6 +120,21 @@ const JobRequisitions = () => {
     }
   };
 
+  // Helper function to convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Remove data:application/pdf;base64, prefix
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const parseJDWithAI = async () => {
     if (!jdFile) return;
 
@@ -128,40 +144,81 @@ const JobRequisitions = () => {
 
       const documentText = await extractTextFromPDF(jdFile);
 
-      const { data: functionData, error: functionError } = await supabase.functions.invoke("parse-jd-document", {
-        body: { documentText, documentType: "jd" },
-      });
+      // Try to call the deployed Edge Function first
+      try {
+        const { data: functionData, error: functionError } = await supabase.functions.invoke("parse-jd-document", {
+          body: { 
+            documentText, 
+            documentType: "jd"
+            // Note: fileBase64 removed to avoid payload size issues
+          },
+        });
 
-      if (functionError) throw functionError;
+        if (functionError) throw functionError;
 
-      if (functionData.success && functionData.data) {
-        const parsed = functionData.data;
+        if (functionData.success && functionData.data) {
+          const parsed = functionData.data;
+          
+          // Auto-fill form with parsed data
+          setFormData(prev => ({
+            ...prev,
+            ...(parsed.position && { position: parsed.position }),
+            ...(parsed.department && { department: parsed.department }),
+            ...(parsed.job_grade && { job_grade: parsed.job_grade }),
+            ...(parsed.salary && { salary: parsed.salary }),
+            ...(parsed.work_location && { work_location: parsed.work_location }),
+            ...(parsed.reports_to && { reports_to: parsed.reports_to }),
+            ...(parsed.job_duties && { job_duties: parsed.job_duties }),
+            ...(parsed.gender && { gender: parsed.gender }),
+            ...(parsed.max_age && { max_age: parsed.max_age }),
+            ...(parsed.min_education && { min_education: parsed.min_education }),
+            ...(parsed.field_of_study && { field_of_study: parsed.field_of_study }),
+            ...(parsed.min_experience && { min_experience: parsed.min_experience }),
+            ...(parsed.experience_in && { experience_in: parsed.experience_in }),
+            ...(parsed.other_skills && { other_skills: parsed.other_skills }),
+            ...(parsed.marital_status && { marital_status: parsed.marital_status }),
+          }));
+
+          toast({ 
+            title: "Parse JD สำเร็จ!", 
+            description: "ข้อมูลถูกนำเข้าฟอร์มอัตโนมัติแล้ว" 
+          });
+          return;
+        } else {
+          throw new Error(functionData.error || "Failed to parse JD");
+        }
+      } catch (edgeFunctionError) {
+        console.warn("Edge Function failed, trying fallback:", edgeFunctionError);
         
-        // Auto-fill form with parsed data
+        // Fallback: Simple text parsing
+        const fallbackParsed = {
+          position: extractField(documentText, ['ตำแหน่ง', 'Position', 'Job Title']),
+          department: extractField(documentText, ['แผนก', 'Department', 'ฝ่าย']),
+          salary: extractField(documentText, ['เงินเดือน', 'Salary', 'ค่าตอบแทน', 'บาท']),
+          work_location: extractField(documentText, ['สถานที่ทำงาน', 'Location', 'ที่ตั้ง']),
+          job_duties: extractField(documentText, ['หน้าที่', 'Responsibilities', 'Job Duties']),
+          min_education: extractField(documentText, ['การศึกษา', 'Education', 'วุฒิการศึกษา']),
+          min_experience: extractField(documentText, ['ประสบการณ์', 'Experience', 'อายุงาน']),
+          other_skills: extractField(documentText, ['ทักษะ', 'Skills', 'ความสามารถ']),
+        };
+
+        // Auto-fill form with fallback parsed data
         setFormData(prev => ({
           ...prev,
-          ...(parsed.position && { position: parsed.position }),
-          ...(parsed.department && { department: parsed.department }),
-          ...(parsed.job_grade && { job_grade: parsed.job_grade }),
-          ...(parsed.work_location && { work_location: parsed.work_location }),
-          ...(parsed.reports_to && { reports_to: parsed.reports_to }),
-          ...(parsed.job_duties && { job_duties: parsed.job_duties }),
-          ...(parsed.gender && { gender: parsed.gender }),
-          ...(parsed.max_age && { max_age: parsed.max_age }),
-          ...(parsed.min_education && { min_education: parsed.min_education }),
-          ...(parsed.field_of_study && { field_of_study: parsed.field_of_study }),
-          ...(parsed.min_experience && { min_experience: parsed.min_experience }),
-          ...(parsed.experience_in && { experience_in: parsed.experience_in }),
-          ...(parsed.other_skills && { other_skills: parsed.other_skills }),
-          ...(parsed.marital_status && { marital_status: parsed.marital_status }),
+          ...(fallbackParsed.position && { position: fallbackParsed.position }),
+          ...(fallbackParsed.department && { department: fallbackParsed.department }),
+          ...(fallbackParsed.salary && { salary: fallbackParsed.salary }),
+          ...(fallbackParsed.work_location && { work_location: fallbackParsed.work_location }),
+          ...(fallbackParsed.job_duties && { job_duties: fallbackParsed.job_duties }),
+          ...(fallbackParsed.min_education && { min_education: fallbackParsed.min_education }),
+          ...(fallbackParsed.min_experience && { min_experience: fallbackParsed.min_experience }),
+          ...(fallbackParsed.other_skills && { other_skills: fallbackParsed.other_skills }),
         }));
 
         toast({ 
-          title: "Parse JD สำเร็จ!", 
-          description: "ข้อมูลถูกนำเข้าฟอร์มอัตโนมัติแล้ว" 
+          title: "Parse JD สำเร็จ (Fallback)", 
+          description: "ข้อมูลบางส่วนถูกนำเข้าฟอร์มแล้ว กรุณาตรวจสอบและแก้ไขเพิ่มเติม" 
         });
-      } else {
-        throw new Error(functionData.error || "Failed to parse JD");
       }
     } catch (error: any) {
       console.error("Error parsing JD:", error);
@@ -173,6 +230,18 @@ const JobRequisitions = () => {
     } finally {
       setParsingJD(false);
     }
+  };
+
+  // Helper function for fallback parsing
+  const extractField = (text: string, keywords: string[]): string => {
+    for (const keyword of keywords) {
+      const regex = new RegExp(`${keyword}[:\\s]*([^\\n\\r]{1,200})`, 'i');
+      const match = text.match(regex);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    return '';
   };
 
 
@@ -262,6 +331,7 @@ const JobRequisitions = () => {
         department: formData.department,
         location: formData.work_location,
         job_grade: formData.job_grade || null,
+        salary: formData.salary || 'ตามตกลง',
         employment_type: formData.hiring_type === 'permanent' ? 'Full-time' : 
                         formData.hiring_type === 'temporary' ? 'Contract' : 'Replacement',
         required_count: parseInt(formData.quantity),
@@ -292,6 +362,7 @@ const JobRequisitions = () => {
         job_description_no: "",
         job_grade: "",
         job_duties: "",
+        salary: "",
         gender: "",
         max_age: "",
         min_experience: "",
@@ -714,6 +785,14 @@ const JobRequisitions = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
+                  <Label>เงินเดือน</Label>
+                  <Input
+                    placeholder="เช่น 25,000-30,000 บาท หรือ ตามตกลง"
+                    value={formData.salary}
+                    onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label>สถานที่ทำงาน *</Label>
                   <Select
                     value={formData.work_location}
@@ -945,20 +1024,19 @@ const JobRequisitions = () => {
                     <TableHead className="font-semibold">ตำแหน่ง</TableHead>
                     <TableHead className="font-semibold">จำนวน</TableHead>
                     <TableHead className="font-semibold">ประเภท</TableHead>
-                    <TableHead className="font-semibold">สถานะ</TableHead>
                     <TableHead className="font-semibold">วันที่สร้าง</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8">
+                      <TableCell colSpan={6} className="text-center py-8">
                         <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
                       </TableCell>
                     </TableRow>
                   ) : requisitions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         ยังไม่มีรายการคำขอ
                       </TableCell>
                     </TableRow>
@@ -977,7 +1055,6 @@ const JobRequisitions = () => {
                         <TableCell>{req.position}</TableCell>
                         <TableCell>{req.quantity}</TableCell>
                         <TableCell>{getHiringTypeLabel(req.hiring_type)}</TableCell>
-                        <TableCell>{getStatusBadge(req.status)}</TableCell>
                         <TableCell>{format(new Date(req.created_at), "dd/MM/yyyy")}</TableCell>
                       </TableRow>
                     ))

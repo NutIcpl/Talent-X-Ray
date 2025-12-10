@@ -1,98 +1,192 @@
-import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PermissionMatrix } from "./PermissionMatrix";
-import { useRolePermissions } from "@/hooks/useRolePermissions";
-import { Shield, Lock } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Shield, Users, UserCheck, Crown } from "lucide-react";
 
-const ROLES = [
-  { key: "admin", label: "Admin", description: "จัดการทุกอย่างในระบบ", isSystem: true },
-  { key: "ceo", label: "CEO", description: "อนุมัติและตัดสินใจระดับสูง", isSystem: false },
-  { key: "manager", label: "Manager", description: "จัดการตามสิทธิ์ที่กำหนด", isSystem: false },
-  { key: "hr_manager", label: "HR Manager", description: "จัดการ HR และรับสมัครงาน", isSystem: false },
-  { key: "recruiter", label: "Recruiter", description: "จัดการการรับสมัครและคัดเลือก", isSystem: false },
-  { key: "interviewer", label: "Interviewer", description: "สัมภาษณ์และประเมินผู้สมัคร", isSystem: false },
-  { key: "candidate", label: "Candidate", description: "ผู้สมัครงาน เข้าถึงข้อมูลส่วนตัวและใบสมัคร", isSystem: false },
-  { key: "viewer", label: "Viewer", description: "ดูข้อมูลเท่านั้น", isSystem: false },
+const roles = [
+  {
+    name: "Admin",
+    value: "admin",
+    icon: Crown,
+    color: "text-red-600",
+    bgColor: "bg-red-100",
+    description: "สิทธิ์เต็มในการจัดการระบบทั้งหมด",
+    permissions: [
+      "จัดการผู้ใช้และบทบาท",
+      "ดูและแก้ไขข้อมูลทั้งหมด",
+      "จัดการตำแหน่งงาน",
+      "จัดการผู้สมัคร",
+      "ดูรายงานและสถิติ",
+      "ตั้งค่าระบบ",
+    ],
+  },
+  {
+    name: "HR Manager",
+    value: "hr_manager",
+    icon: Shield,
+    color: "text-blue-600",
+    bgColor: "bg-blue-100",
+    description: "จัดการกระบวนการสรรหาและคัดเลือกบุคลากร",
+    permissions: [
+      "จัดการตำแหน่งงาน",
+      "จัดการผู้สมัครทั้งหมด",
+      "อนุมัติและปฏิเสธผู้สมัคร",
+      "ดูรายงานและสถิติ",
+      "จัดการ Recruiter",
+    ],
+  },
+  {
+    name: "Recruiter",
+    value: "recruiter",
+    icon: UserCheck,
+    color: "text-green-600",
+    bgColor: "bg-green-100",
+    description: "ดำเนินการสรรหาและคัดกรองผู้สมัคร",
+    permissions: [
+      "ดูตำแหน่งงาน",
+      "จัดการผู้สมัคร",
+      "คัดกรองและประเมินผู้สมัคร",
+      "ส่งผู้สมัครให้ Manager",
+      "ดูรายงานของตนเอง",
+    ],
+  },
+  {
+    name: "Manager",
+    value: "manager",
+    icon: Users,
+    color: "text-purple-600",
+    bgColor: "bg-purple-100",
+    description: "สัมภาษณ์และประเมินผู้สมัครในแผนกของตน",
+    permissions: [
+      "ดูผู้สมัครที่ส่งมาให้",
+      "สัมภาษณ์และประเมินผู้สมัคร",
+      "อนุมัติหรือปฏิเสธผู้สมัคร",
+      "ดูรายงานของแผนก",
+    ],
+  },
 ];
 
 export function RolesPermissionsTab() {
-  const [selectedRole, setSelectedRole] = useState<string>("manager");
-  const { permissions, updatePermissions } = useRolePermissions(selectedRole);
-
-  const handleSavePermissions = (
-    newPermissions: { resource: string; action: string; allowed: boolean }[]
-  ) => {
-    updatePermissions({ role: selectedRole, permissions: newPermissions });
-  };
-
-  const selectedRoleInfo = ROLES.find((r) => r.key === selectedRole);
-  const isSystemRole = selectedRoleInfo?.isSystem || false;
-
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-2">Roles & Permissions</h2>
-        <p className="text-muted-foreground">
-          จัดการบทบาทและสิทธิ์การเข้าถึงของผู้ใช้
-        </p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Roles & Permissions</CardTitle>
+          <CardDescription>
+            บทบาทและสิทธิ์การเข้าถึงในระบบ
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {roles.map((role) => {
+              const Icon = role.icon;
+              return (
+                <Card key={role.value} className="border-2">
+                  <CardHeader>
+                    <div className="flex items-center gap-4">
+                      <div className={`p-3 rounded-lg ${role.bgColor}`}>
+                        <Icon className={`h-6 w-6 ${role.color}`} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <CardTitle className="text-xl">{role.name}</CardTitle>
+                          <Badge variant="outline">{role.value}</Badge>
+                        </div>
+                        <CardDescription className="mt-1">
+                          {role.description}
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div>
+                      <h4 className="font-semibold mb-3">สิทธิ์การเข้าถึง:</h4>
+                      <ul className="space-y-2">
+                        {role.permissions.map((permission, index) => (
+                          <li key={index} className="flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            <span className="text-sm">{permission}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {ROLES.map((role) => (
-          <Card
-            key={role.key}
-            className={`cursor-pointer transition-all hover:shadow-md ${
-              selectedRole === role.key ? "ring-2 ring-primary" : ""
-            }`}
-            onClick={() => setSelectedRole(role.key)}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  <CardTitle className="text-lg">{role.label}</CardTitle>
-                </div>
-                {role.isSystem && (
-                  <Badge variant="secondary" className="gap-1">
-                    <Lock className="h-3 w-3" />
-                    System
-                  </Badge>
-                )}
-              </div>
-              <CardDescription>{role.description}</CardDescription>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
-
-      {selectedRoleInfo && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Permissions: {selectedRoleInfo.label}</CardTitle>
-            <CardDescription>
-              {isSystemRole
-                ? "บทบาทนี้เป็นระบบ ไม่สามารถแก้ไข permissions ได้"
-                : "กำหนดสิทธิ์การเข้าถึงสำหรับบทบาทนี้"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isSystemRole ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Lock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Admin มีสิทธิ์เข้าถึงทุกอย่างในระบบ</p>
-                <p className="text-sm">ไม่สามารถแก้ไขได้</p>
-              </div>
-            ) : (
-              <PermissionMatrix
-                role={selectedRole}
-                initialPermissions={permissions}
-                onSave={handleSavePermissions}
-              />
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>สรุปบทบาท</CardTitle>
+          <CardDescription>ตารางเปรียบเทียบสิทธิ์การเข้าถึง</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ฟีเจอร์</TableHead>
+                <TableHead className="text-center">Admin</TableHead>
+                <TableHead className="text-center">HR Manager</TableHead>
+                <TableHead className="text-center">Recruiter</TableHead>
+                <TableHead className="text-center">Manager</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell>จัดการผู้ใช้</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+                <TableCell className="text-center">❌</TableCell>
+                <TableCell className="text-center">❌</TableCell>
+                <TableCell className="text-center">❌</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>จัดการตำแหน่งงาน</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+                <TableCell className="text-center">👁️</TableCell>
+                <TableCell className="text-center">❌</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>จัดการผู้สมัคร</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+                <TableCell className="text-center">👁️</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>สัมภาษณ์ผู้สมัคร</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>ดูรายงานทั้งหมด</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+                <TableCell className="text-center">📊</TableCell>
+                <TableCell className="text-center">📊</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>ตั้งค่าระบบ</TableCell>
+                <TableCell className="text-center">✅</TableCell>
+                <TableCell className="text-center">❌</TableCell>
+                <TableCell className="text-center">❌</TableCell>
+                <TableCell className="text-center">❌</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+          <div className="mt-4 text-sm text-muted-foreground">
+            <p>✅ = เข้าถึงได้เต็มรูปแบบ</p>
+            <p>👁️ = ดูได้อย่างเดียว</p>
+            <p>📊 = ดูได้เฉพาะของตนเอง/แผนก</p>
+            <p>❌ = ไม่สามารถเข้าถึงได้</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

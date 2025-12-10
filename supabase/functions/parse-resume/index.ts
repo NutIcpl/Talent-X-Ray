@@ -8,6 +8,51 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Fix Thai sara am (ำ) encoding issues
+function fixThaiText(text: string | undefined | null): string {
+  if (!text) return '';
+  
+  // Common Thai words that get corrupted with sara am
+  const corrections: Record<string, string> = {
+    'งำน': 'งาน',
+    'ขำย': 'ขาย',
+    'วำงแผน': 'วางแผน',
+    'ติดตำม': 'ติดตาม',
+    'บริหำร': 'บริหาร',
+    'ทำงำน': 'ทำงาน',
+    'กำร': 'การ',
+    'ช่องทำง': 'ช่องทาง',
+    'จัดจำหน่ำย': 'จัดจำหน่าย',
+    'ประสิทธิภำพ': 'ประสิทธิภาพ',
+    'มูลค่ำ': 'มูลค่า',
+    'กระบวนกำร': 'กระบวนการ',
+    'เป้ำหมำย': 'เป้าหมาย',
+    'ตำแหน่ง': 'ตำแหน่ง',
+    'สำนักงำน': 'สำนักงาน',
+    'คุณสมบัติ': 'คุณสมบัติ',
+    'ควำมสำมำรถ': 'ความสามารถ',
+    'ประสบกำรณ์': 'ประสบการณ์',
+    'กำรศึกษำ': 'การศึกษา',
+    'ทักษะ': 'ทักษะ',
+    'พัฒนำ': 'พัฒนา',
+    'วิเครำะห์': 'วิเคราะห์',
+    'บริษัท': 'บริษัท',
+    'ผู้จัดกำร': 'ผู้จัดการ',
+  };
+  
+  let fixed = text;
+  
+  // Apply corrections
+  for (const [wrong, correct] of Object.entries(corrections)) {
+    fixed = fixed.replace(new RegExp(wrong, 'g'), correct);
+  }
+  
+  // Fix common pattern: consonant + ำ + vowel should be consonant + า + consonant
+  fixed = fixed.replace(/([ก-ฮ])ำ([ก-ฮ])/g, '$1า$2');
+  
+  return fixed;
+}
+
 interface ParsedResume {
   name: string;
   email: string;
@@ -25,27 +70,60 @@ serve(async (req) => {
   }
 
   try {
-    const { resumeText } = await req.json();
+    const { resumeText, fileBase64 } = await req.json();
 
-    if (!resumeText) {
-      throw new Error('Resume text is required');
+    if (!resumeText && !fileBase64) {
+      throw new Error('Resume text or file base64 is required');
     }
 
-    console.log('Parsing resume with AI...');
+    console.log('Parsing resume with AI OCR...');
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://your-app.com',
+        'X-Title': 'Resume Parser',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
+        model: 'google/gemini-3-pro-preview',
+        messages: fileBase64 ? [
           {
             role: 'system',
-            content:
-              'You are a resume parser for job applications. Analyze the provided resume text and extract structured candidate information using the available tools.',
+            content: `You are a resume parser for job applications. Use OCR to analyze the provided resume document and extract structured candidate information using the available tools.
+
+CRITICAL THAI LANGUAGE RULES:
+- Preserve EXACT Thai spelling and characters as written in the document
+- DO NOT separate Thai vowels from consonants (e.g., keep "งาน" not "งำน", "ขาย" not "ขำย")
+- Maintain proper Thai orthography and sara am (ำ) placement
+- Copy Thai text character-by-character exactly as it appears`,
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: 'Parse this resume document using OCR and extract the candidate information for the job application form. Read all text from the document image/PDF and extract structured data.'
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:application/pdf;base64,${fileBase64}`
+                }
+              }
+            ]
+          },
+        ] : [
+          {
+            role: 'system',
+            content: `You are a resume parser for job applications. Analyze the provided resume text and extract structured candidate information using the available tools.
+
+CRITICAL THAI LANGUAGE RULES:
+- Preserve EXACT Thai spelling and characters as written in the document
+- DO NOT separate Thai vowels from consonants (e.g., keep "งาน" not "งำน", "ขาย" not "ขำย")
+- Maintain proper Thai orthography and sara am (ำ) placement
+- Copy Thai text character-by-character exactly as it appears`,
           },
           {
             role: 'user',
@@ -115,15 +193,15 @@ serve(async (req) => {
         // Preferred path: structured tool calling
         const args = JSON.parse(toolCall.function.arguments);
         parsedData = {
-          name: args.name ?? '',
+          name: fixThaiText(args.name) || '',
           email: args.email ?? '',
           phone: args.phone ?? '',
-          position: args.position ?? '',
-          experience: args.experience ?? '',
-          education: args.education ?? '',
-          skills: Array.isArray(args.skills) ? args.skills : [],
+          position: fixThaiText(args.position) || '',
+          experience: fixThaiText(args.experience) || '',
+          education: fixThaiText(args.education) || '',
+          skills: Array.isArray(args.skills) ? args.skills.map((s: string) => fixThaiText(s)) : [],
         };
-        console.log('Parsed via tool_call:', parsedData);
+        console.log('Parsed via tool_call (Thai fixed):', parsedData);
       } else {
         // Fallback: try to parse JSON content from message.content like the old implementation
         const content = choice?.message?.content ?? '';
@@ -136,7 +214,17 @@ serve(async (req) => {
           .replace(/[\u0000-\u0019]+/g, ' ')
           .trim();
 
-        parsedData = JSON.parse(cleanedContent);
+        const rawData = JSON.parse(cleanedContent);
+        parsedData = {
+          name: fixThaiText(rawData.name) || '',
+          email: rawData.email ?? '',
+          phone: rawData.phone ?? '',
+          position: fixThaiText(rawData.position) || '',
+          experience: fixThaiText(rawData.experience) || '',
+          education: fixThaiText(rawData.education) || '',
+          skills: Array.isArray(rawData.skills) ? rawData.skills.map((s: string) => fixThaiText(s)) : [],
+        };
+        console.log('Parsed via fallback (Thai fixed):', parsedData);
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);

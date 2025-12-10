@@ -22,6 +22,7 @@ import { TestScoreDialog } from "./TestScoreDialog";
 import { ResumeDialog } from "./ResumeDialog";
 import { exportCandidateEvaluationPDF } from "@/lib/exportCandidateEvaluationPDF";
 import { useCandidateDetails } from "@/hooks/useCandidateDetails";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CandidateDetailDialogProps {
   candidate: {
@@ -149,6 +150,13 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
   const currentPipelineIndex = pipelineSteps.findIndex(step => step.key === candidate.pipelineStatus);
   
   const handleStatusChange = (status: string) => {
+    console.log('CandidateDetailDialog handleStatusChange:', { 
+      status, 
+      candidateId: candidate.id, 
+      currentStage: candidate.stage,
+      currentStatus: candidate.status 
+    });
+    
     if (onStatusChange) {
       const statusLabelsMap: Record<string, string> = {
         shortlisted: "Shortlist",
@@ -156,18 +164,29 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
         not_interested: "Not interested",
       };
       
-      onStatusChange(candidate.id, status);
+      // Map UI status to database stage
+      const statusToStageMap: Record<string, string> = {
+        shortlisted: "Shortlist",  // Shortlist maps to Shortlist stage
+        interested: "Interested",   // Interested maps to Interested stage
+        not_interested: "Rejected",  // Not interested maps to Rejected stage
+      };
+      
+      const dbStage = statusToStageMap[status] || status;
+      console.log('Calling onStatusChange with:', { candidateId: candidate.id, dbStage });
+      onStatusChange(candidate.id, dbStage);
       
       addNotification({
         type: 'status_change',
         title: 'เปลี่ยนสถานะผู้สมัคร',
         description: `ย้าย ${candidate.name} ไปยังแท็บ ${statusLabelsMap[status]}`,
         candidateName: candidate.name,
-        oldStatus: statusLabelsMap[candidate.status],
+        oldStatus: statusLabelsMap[candidate.status || ''] || candidate.stage || 'Pending',
         newStatus: statusLabelsMap[status],
       });
       
       onOpenChange(false);
+    } else {
+      console.error('onStatusChange is not defined!');
     }
   };
 
@@ -249,11 +268,15 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
     setActiveInterview(null);
   };
 
-  const handleCombinedInterviewSave = (interviews: any) => {
+  const handleCombinedInterviewSave = async (interviews: any) => {
+    console.log('handleCombinedInterviewSave called with:', interviews);
+    console.log('candidate.application_id:', candidate.application_id);
+    
     // Save to database
     if (candidate.application_id) {
       // Save First Interview (Manager)
       if (interviews.manager?.date) {
+        console.log('Saving First Interview:', interviews.manager);
         updateFirstInterview({
           applicationId: candidate.application_id,
           date: interviews.manager.date,
@@ -266,6 +289,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
       
       // Save Final Interview (IS)
       if (interviews.isTeam?.date) {
+        console.log('Saving Final Interview:', interviews.isTeam);
         updateFinalInterview({
           applicationId: candidate.application_id,
           date: interviews.isTeam.date,
@@ -274,6 +298,64 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
           scores: interviews.isTeam.scores,
           totalScore: interviews.isTeam.total_score,
         });
+      }
+    } else {
+      console.error('No application_id found for candidate:', candidate.id);
+      console.log('Creating application first...');
+      
+      // Create application if not exists
+      try {
+        // First, try to get a position_id (use the first available position or create a default one)
+        const { data: positions } = await supabase
+          .from('job_positions')
+          .select('id')
+          .limit(1);
+        
+        const positionId = positions && positions.length > 0 ? positions[0].id : null;
+        
+        if (!positionId) {
+          console.error('No position found. Cannot create application without position_id');
+          return;
+        }
+        
+        const { data: newApp, error } = await supabase
+          .from('applications')
+          .insert({
+            candidate_id: candidate.id,
+            position_id: positionId,
+            stage: 'Screening',
+          })
+          .select()
+          .single();
+          
+        if (error) throw error;
+        
+        console.log('Created application:', newApp);
+        
+        // Now save interviews with new application_id
+        if (interviews.manager?.date && newApp) {
+          updateFirstInterview({
+            applicationId: newApp.id,
+            date: interviews.manager.date,
+            passed: interviews.manager.passed,
+            feedback: interviews.manager.feedback,
+            scores: interviews.manager.scores,
+            totalScore: interviews.manager.total_score,
+          });
+        }
+        
+        if (interviews.isTeam?.date && newApp) {
+          updateFinalInterview({
+            applicationId: newApp.id,
+            date: interviews.isTeam.date,
+            passed: interviews.isTeam.passed,
+            feedback: interviews.isTeam.feedback,
+            scores: interviews.isTeam.scores,
+            totalScore: interviews.isTeam.total_score,
+          });
+        }
+      } catch (error) {
+        console.error('Error creating application:', error);
       }
     }
 
@@ -371,7 +453,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
           <h3 className="text-lg font-semibold mb-4">จัดการผู้สมัคร</h3>
           <div className="flex gap-3">
             <Button 
-              variant={candidate.status === 'shortlisted' ? 'default' : 'outline'}
+              variant={(candidate.status === 'shortlisted' || candidate.stage === 'Shortlist') ? 'default' : 'outline'}
               className="flex-1"
               onClick={() => handleStatusChange('shortlisted')}
             >
@@ -379,7 +461,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
               Shortlist
             </Button>
             <Button 
-              variant={candidate.status === 'interested' ? 'default' : 'outline'}
+              variant={(candidate.status === 'interested' || candidate.stage === 'Interested') ? 'default' : 'outline'}
               className="flex-1"
               onClick={() => handleStatusChange('interested')}
             >
@@ -387,7 +469,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
               Interested
             </Button>
             <Button 
-              variant={candidate.status === 'not_interested' ? 'destructive' : 'outline'}
+              variant={(candidate.status === 'not_interested' || candidate.stage === 'Rejected') ? 'destructive' : 'outline'}
               className="flex-1"
               onClick={() => handleStatusChange('not_interested')}
             >
@@ -443,6 +525,30 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
 
           <Separator />
 
+          {/* Resume File */}
+          {(candidate.resumeUrl || candidate.resume_url) && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3">เอกสารประกอบการสมัคร</h3>
+              <div className="flex items-center gap-3 p-4 border rounded-lg bg-muted/20 hover:bg-muted/30 transition-colors">
+                <FileText className="h-8 w-8 text-primary" />
+                <div className="flex-1">
+                  <div className="font-medium">Resume / CV</div>
+                  <div className="text-sm text-muted-foreground">คลิกเพื่อดูไฟล์ Resume ฉบับเต็ม</div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => window.open(candidate.resumeUrl || candidate.resume_url || '', '_blank')}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  เปิดดู
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {(candidate.resumeUrl || candidate.resume_url) && <Separator />}
+
           {/* Position & Experience */}
           <div>
             <h3 className="text-lg font-semibold mb-3">ตำแหน่งที่สมัคร</h3>
@@ -454,7 +560,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                     {candidateDetails?.position || candidate.position || candidate.position_title || 'ไม่ระบุ'}
                   </span>
                   {candidateDetails?.expected_salary && (
-                    <span className="text-muted-foreground ml-2">• เงินเดือนที่คาดหวัง: {candidateDetails.expected_salary} บาท</span>
+                    <span className="text-muted-foreground ml-2">• เงินเดือนที่คาดหวัง: {candidateDetails.expected_salary.toLocaleString()} บาท</span>
                   )}
                 </div>
               </div>
@@ -472,6 +578,67 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
               )}
             </div>
           </div>
+
+          <Separator />
+
+          {/* Employment Record */}
+          {candidateDetails?.employment_records && candidateDetails.employment_records.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-primary" />
+                ประวัติการทำงาน
+              </h3>
+              <div className="space-y-4">
+                {candidateDetails.employment_records.map((record: any, index: number) => (
+                  <div key={index} className="p-4 border rounded-lg bg-muted/20 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="font-semibold text-base">{record.position || 'ไม่ระบุตำแหน่ง'}</div>
+                        <div className="text-sm text-primary font-medium">{record.company || 'ไม่ระบุบริษัท'}</div>
+                      </div>
+                      <Badge variant="outline" className="ml-2">
+                        ประสบการณ์ที่ {index + 1}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+                      {record.period_time && (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">ระยะเวลา:</span>
+                          <span className="font-medium">{record.period_time}</span>
+                        </div>
+                      )}
+                      {record.salary && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">เงินเดือน:</span>
+                          <span className="font-medium">{record.salary.toLocaleString()} บาท</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {record.responsibilities && (
+                      <div className="mb-3">
+                        <div className="text-sm text-muted-foreground mb-1">หน้าที่รับผิดชอบ:</div>
+                        <div className="text-sm whitespace-pre-wrap bg-background/50 p-3 rounded border">
+                          {record.responsibilities}
+                        </div>
+                      </div>
+                    )}
+
+                    {record.reason_for_leaving && (
+                      <div>
+                        <div className="text-sm text-muted-foreground mb-1">เหตุผลที่ลาออก:</div>
+                        <div className="text-sm text-muted-foreground italic">
+                          {record.reason_for_leaving}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <Separator />
 
@@ -547,12 +714,12 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
               <h3 className="text-lg font-semibold">AI Fit Score</h3>
               <div className="text-2xl font-bold text-primary">
                 {candidate.score ?? candidate.ai_fit_score ?? '-'}%
-                <span className="text-sm text-muted-foreground ml-1">JD Match</span>
+                <span className="text-sm text-muted-foreground ml-1">Overall Match</span>
               </div>
             </div>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Conformity to Job description (50%)</span>
+                <span className="text-sm">ประสบการณ์ทำงานที่ตรงกับตำแหน่งงาน (65%)</span>
                 <div className="flex items-center gap-2">
                   <div className="w-48 bg-secondary rounded-full h-2">
                     <div className="bg-primary h-2 rounded-full" style={{ width: '85%' }}></div>
@@ -561,7 +728,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Work experience consistent (20%)</span>
+                <span className="text-sm">คุณสมบัติ (10%)</span>
                 <div className="flex items-center gap-2">
                   <div className="w-48 bg-secondary rounded-full h-2">
                     <div className="bg-primary h-2 rounded-full" style={{ width: '92%' }}></div>
@@ -570,16 +737,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Other Skill and abilities (10%)</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-48 bg-secondary rounded-full h-2">
-                    <div className="bg-primary h-2 rounded-full" style={{ width: '88%' }}></div>
-                  </div>
-                  <span className="text-sm font-medium w-12 text-right">88%</span>
-                </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Educational qualification (10%)</span>
+                <span className="text-sm">วุฒิการศึกษา (10%)</span>
                 <div className="flex items-center gap-2">
                   <div className="w-48 bg-secondary rounded-full h-2">
                     <div className="bg-primary h-2 rounded-full" style={{ width: '90%' }}></div>
@@ -588,12 +746,12 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">GPA (10%)</span>
+                <span className="text-sm">ทักษะและความสามารถอื่น ๆ (15%)</span>
                 <div className="flex items-center gap-2">
                   <div className="w-48 bg-secondary rounded-full h-2">
-                    <div className="bg-primary h-2 rounded-full" style={{ width: '95%' }}></div>
+                    <div className="bg-primary h-2 rounded-full" style={{ width: '88%' }}></div>
                   </div>
-                  <span className="text-sm font-medium w-12 text-right">95%</span>
+                  <span className="text-sm font-medium w-12 text-right">88%</span>
                 </div>
               </div>
             </div>
@@ -798,12 +956,6 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             ปิด
           </Button>
-          {candidate.resumeUrl && (
-            <Button onClick={() => window.open(candidate.resumeUrl, '_blank')}>
-              <FileText className="h-4 w-4 mr-2" />
-              ดู Resume ฉบับเต็ม
-            </Button>
-          )}
           <Button 
             onClick={handleDownloadEvaluation}
             variant="default"

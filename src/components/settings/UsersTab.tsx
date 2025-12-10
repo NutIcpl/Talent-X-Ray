@@ -1,272 +1,363 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { UserPlus, Pencil, Trash2, Search } from "lucide-react";
-import { UserManagementDialog } from "./UserManagementDialog";
-import { useProfiles, Profile } from "@/hooks/useProfiles";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { UserPlus, Edit } from "lucide-react";
 
-const roleNames: Record<string, string> = {
-  admin: "Admin",
-  ceo: "CEO",
-  manager: "Manager",
-  hr_manager: "HR Manager",
-  recruiter: "Recruiter",
-  interviewer: "Interviewer",
-  candidate: "Candidate",
-  viewer: "Viewer",
-};
+interface User {
+  id: string;
+  email: string;
+  name: string | null;
+  roles: string[];
+}
 
 export function UsersTab() {
-  const { profiles, isLoading, deleteProfile, updateProfile, createProfile } = useProfiles();
-  const [editingUser, setEditingUser] = useState<Profile | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
-  
-  // Search and filter states
-  const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [newUser, setNewUser] = useState({ email: "", name: "", role: "recruiter", password: "" });
 
-  // Filter profiles
-  const filteredProfiles = profiles.filter((profile) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      profile.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      profile.email.toLowerCase().includes(searchQuery.toLowerCase());
+  // Fetch all users with their roles
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ["users-with-roles"],
+    queryFn: async () => {
+      // Get all user roles first
+      const { data: userRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role, profiles(id, email, name)");
 
-    const matchesRole =
-      roleFilter === "all" || profile.roles.includes(roleFilter);
+      if (rolesError) {
+        console.error("Error fetching user roles:", rolesError);
+        throw rolesError;
+      }
 
-    const matchesStatus =
-      statusFilter === "all" || profile.status === statusFilter;
+      console.log("User roles data:", userRoles);
 
-    return matchesSearch && matchesRole && matchesStatus;
+      // Group roles by user
+      const usersMap = new Map<string, User>();
+      
+      userRoles?.forEach((ur: any) => {
+        const userId = ur.user_id;
+        const profile = ur.profiles;
+        
+        if (!usersMap.has(userId)) {
+          usersMap.set(userId, {
+            id: userId,
+            email: profile?.email || "Unknown",
+            name: profile?.name || null,
+            roles: [],
+          });
+        }
+        
+        usersMap.get(userId)!.roles.push(ur.role);
+      });
+
+      return Array.from(usersMap.values());
+    },
   });
 
-  const handleAddUser = () => {
-    setEditingUser(null);
-    setIsDialogOpen(true);
-  };
+  // Add/Update user role
+  const updateUserRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      // Remove existing roles
+      await supabase.from("user_roles").delete().eq("user_id", userId);
+      
+      // Add new role (cast to proper type)
+      const { error } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, role: role as any });
 
-  const handleEditUser = (user: Profile) => {
-    setEditingUser(user);
-    setIsDialogOpen(true);
-  };
-
-  const handleSaveUser = (userData: any) => {
-    if (userData.id) {
-      // Update existing user
-      updateProfile({
-        userId: userData.id,
-        name: userData.name,
-        department: userData.department,
-        roles: userData.roles,
-        status: userData.status,
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
+      toast({ title: "อัปเดตสำเร็จ", description: "บทบาทผู้ใช้ถูกอัปเดตแล้ว" });
+      setEditingUser(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: error.message,
+        variant: "destructive",
       });
-    } else {
-      // Create new user
-      if (!userData.password) {
-        return;
-      }
-      createProfile({
-        email: userData.email,
-        password: userData.password,
-        name: userData.name,
-        department: userData.department,
-        role: userData.roles[0], // Use first role for initial creation
+    },
+  });
+
+  // Add new user
+  const addUserMutation = useMutation({
+    mutationFn: async ({ email, password, name, role }: { email: string; password: string; name: string; role: string }) => {
+      // Sign up new user
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          },
+        },
       });
-    }
+
+      if (signUpError) throw signUpError;
+      if (!authData.user) throw new Error("Failed to create user");
+
+      // Add role (cast to proper type)
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .insert({ user_id: authData.user.id, role: role as any });
+
+      if (roleError) throw roleError;
+
+      return authData.user;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-with-roles"] });
+      toast({ title: "เพิ่มผู้ใช้สำเร็จ", description: "ผู้ใช้ใหม่ถูกสร้างแล้ว" });
+      setIsAddUserOpen(false);
+      setNewUser({ email: "", name: "", role: "recruiter", password: "" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleUpdateRole = (userId: string, role: string) => {
+    updateUserRoleMutation.mutate({ userId, role });
   };
 
-  const handleDeleteClick = (userId: string) => {
-    setDeleteUserId(userId);
+  const getRoleBadgeColor = (role: string) => {
+    const colors: Record<string, string> = {
+      admin: "bg-red-100 text-red-700",
+      hr_manager: "bg-blue-100 text-blue-700",
+      recruiter: "bg-green-100 text-green-700",
+      manager: "bg-purple-100 text-purple-700",
+    };
+    return colors[role] || "bg-gray-100 text-gray-700";
   };
 
-  const handleDeleteConfirm = () => {
-    if (deleteUserId) {
-      deleteProfile(deleteUserId);
-      setDeleteUserId(null);
-    }
+  const getRoleLabel = (role: string) => {
+    const labels: Record<string, string> = {
+      admin: "Admin",
+      hr_manager: "HR Manager",
+      recruiter: "Recruiter",
+      manager: "Manager",
+    };
+    return labels[role] || role;
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold mb-2">User Management</h2>
-          <p className="text-muted-foreground">จัดการผู้ใช้และสิทธิ์การเข้าถึง</p>
-        </div>
-        <Button onClick={handleAddUser}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Add User
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>ค้นหาและกรอง</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="ค้นหาชื่อหรืออีเมล..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="กรองตามบทบาท" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">ทุกบทบาท</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="ceo">CEO</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
-                <SelectItem value="hr_manager">HR Manager</SelectItem>
-                <SelectItem value="recruiter">Recruiter</SelectItem>
-                <SelectItem value="interviewer">Interviewer</SelectItem>
-                <SelectItem value="candidate">Candidate</SelectItem>
-                <SelectItem value="viewer">Viewer</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="กรองตามสถานะ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">ทุกสถานะ</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>User Management</CardTitle>
+            <CardDescription>จัดการผู้ใช้และบทบาทในระบบ</CardDescription>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="pt-6">
-          <Table>
-            <TableHeader>
+          <Button onClick={() => setIsAddUserOpen(true)}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            เพิ่มผู้ใช้
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ชื่อ</TableHead>
+              <TableHead>อีเมล</TableHead>
+              <TableHead>บทบาท</TableHead>
+              <TableHead className="text-right">จัดการ</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
               <TableRow>
-                <TableHead>ชื่อ</TableHead>
-                <TableHead>แผนก</TableHead>
-                <TableHead>อีเมล</TableHead>
-                <TableHead>บทบาท</TableHead>
-                <TableHead>สถานะ</TableHead>
-                <TableHead className="text-right">การจัดการ</TableHead>
+                <TableCell colSpan={4} className="text-center">
+                  กำลังโหลด...
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">
-                    กำลังโหลด...
+            ) : users.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center">
+                  ไม่มีผู้ใช้
+                </TableCell>
+              </TableRow>
+            ) : (
+              users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">
+                    {user.name || "-"}
                   </TableCell>
-                </TableRow>
-              ) : filteredProfiles.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">
-                    ไม่พบผู้ใช้
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredProfiles.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.department || "-"}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {user.roles.map((role) => (
-                          <Badge key={role} variant="outline">
-                            {roleNames[role] || role}
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      {user.roles.length > 0 ? (
+                        user.roles.map((role) => (
+                          <Badge
+                            key={role}
+                            className={getRoleBadgeColor(role)}
+                          >
+                            {getRoleLabel(role)}
                           </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.status === "active" ? "default" : "secondary"}>
-                        {user.status === "active" ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditUser(user)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteClick(user.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                        ))
+                      ) : (
+                        <Badge variant="outline">ไม่มีบทบาท</Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingUser(user)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
 
-      <UserManagementDialog
-        user={editingUser}
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        onSave={handleSaveUser}
-      />
+        {/* Edit User Dialog */}
+        <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>แก้ไขบทบาทผู้ใช้</DialogTitle>
+              <DialogDescription>
+                เลือกบทบาทสำหรับ {editingUser?.email}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>บทบาท</Label>
+                <Select
+                  defaultValue={editingUser?.roles[0] || "recruiter"}
+                  onValueChange={(value) => {
+                    if (editingUser) {
+                      handleUpdateRole(editingUser.id, value);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="hr_manager">HR Manager</SelectItem>
+                    <SelectItem value="recruiter">Recruiter</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
-      <AlertDialog open={!!deleteUserId} onOpenChange={() => setDeleteUserId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>ยืนยันการลบผู้ใช้</AlertDialogTitle>
-            <AlertDialogDescription>
-              คุณแน่ใจหรือไม่ว่าต้องการลบผู้ใช้นี้? การกระทำนี้ไม่สามารถย้อนกลับได้
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm}>ลบ</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        {/* Add User Dialog */}
+        <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>เพิ่มผู้ใช้ใหม่</DialogTitle>
+              <DialogDescription>
+                สร้างบัญชีผู้ใช้ใหม่ในระบบ
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>อีเมล</Label>
+                <Input
+                  type="email"
+                  placeholder="user@example.com"
+                  value={newUser.email}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, email: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>ชื่อ-นามสกุล</Label>
+                <Input
+                  placeholder="ชื่อ นามสกุล"
+                  value={newUser.name}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, name: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>รหัสผ่าน</Label>
+                <Input
+                  type="password"
+                  placeholder="รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)"
+                  value={newUser.password}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, password: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>บทบาท</Label>
+                <Select
+                  value={newUser.role}
+                  onValueChange={(value) =>
+                    setNewUser({ ...newUser, role: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="hr_manager">HR Manager</SelectItem>
+                    <SelectItem value="recruiter">Recruiter</SelectItem>
+                    <SelectItem value="manager">Manager</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>
+                ยกเลิก
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!newUser.email || !newUser.password || newUser.password.length < 6) {
+                    toast({
+                      title: "ข้อมูลไม่ครบถ้วน",
+                      description: "กรุณากรอกอีเมลและรหัสผ่าน (อย่างน้อย 6 ตัวอักษร)",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  addUserMutation.mutate({
+                    email: newUser.email,
+                    password: newUser.password,
+                    name: newUser.name,
+                    role: newUser.role,
+                  });
+                }}
+                disabled={addUserMutation.isPending}
+              >
+                {addUserMutation.isPending ? "กำลังเพิ่ม..." : "เพิ่มผู้ใช้"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Clock, Briefcase, Search, Loader2 } from "lucide-react";
 import { JobDetailDialog } from "@/components/jobs/JobDetailDialog";
+import { JobEditDialog } from "@/components/jobs/JobEditDialog";
 import { useJobPositions } from "@/hooks/useJobPositions";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
@@ -17,6 +18,7 @@ export default function Jobs() {
   const { positions, isLoading, updatePosition, deletePosition } = useJobPositions();
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [locationFilter, setLocationFilter] = useState<string>("all");
@@ -42,6 +44,24 @@ export default function Jobs() {
 
   const handleApplyJob = (jobId: string, jobTitle: string) => {
     navigate("/job-application", { state: { jobId, jobTitle } });
+  };
+
+  const handleEdit = () => {
+    setIsDetailOpen(false);
+    setIsEditOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    // Save current scroll position
+    const scrollPosition = window.scrollY;
+    
+    // Close edit dialog
+    setIsEditOpen(false);
+    
+    // Restore scroll position after a short delay to allow re-render
+    setTimeout(() => {
+      window.scrollTo(0, scrollPosition);
+    }, 100);
   };
 
   // Get unique departments and locations for filters
@@ -79,7 +99,7 @@ export default function Jobs() {
       type: job.employment_type || "Full-time",
       status: job.status as "open" | "closed",
       postedDate: job.created_at ? format(new Date(job.created_at), "dd MMM yyyy", { locale: th }) : "ไม่ระบุ",
-      salaryRange: job.salary_min && job.salary_max ? `฿${job.salary_min.toLocaleString()} - ฿${job.salary_max.toLocaleString()}` : "ตามตกลง",
+      salaryRange: job.salary || (job.salary_min && job.salary_max ? `฿${job.salary_min.toLocaleString()} - ฿${job.salary_max.toLocaleString()}` : "ตามตกลง"),
       numberOfPositions: `${job.required_count || 1} อัตรา`,
       jobGrade: job.job_grade || "-",
       description: job.description || "ไม่มีรายละเอียด",
@@ -94,6 +114,16 @@ export default function Jobs() {
       }
     }));
   }, [filteredJobs]);
+
+  // Update selectedJob when positions change (after edit)
+  useEffect(() => {
+    if (selectedJob && positions.length > 0) {
+      const updatedJob = transformedJobs.find(job => job.id === selectedJob.id);
+      if (updatedJob && JSON.stringify(updatedJob) !== JSON.stringify(selectedJob)) {
+        setSelectedJob(updatedJob);
+      }
+    }
+  }, [positions]);
 
   if (isLoading) {
     return (
@@ -290,14 +320,22 @@ export default function Jobs() {
       </div>
 
       {selectedJob && (
-        <JobDetailDialog
-          job={selectedJob}
-          open={isDetailOpen}
-          onOpenChange={setIsDetailOpen}
-          onEdit={() => {}}
-          onDelete={() => handleDelete(selectedJob.id)}
-          onViewCandidates={handleViewCandidates}
-        />
+        <>
+          <JobDetailDialog
+            job={selectedJob}
+            open={isDetailOpen}
+            onOpenChange={setIsDetailOpen}
+            onEdit={handleEdit}
+            onDelete={() => handleDelete(selectedJob.id)}
+            onViewCandidates={handleViewCandidates}
+          />
+          <JobEditDialog
+            job={selectedJob}
+            open={isEditOpen}
+            onOpenChange={setIsEditOpen}
+            onSuccess={handleEditSuccess}
+          />
+        </>
       )}
     </div>
   );
