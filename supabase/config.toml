@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.send-email-with-attachments]
 verify_jwt = false
+
+[functions.compare-candidates]
+verify_jwt = false

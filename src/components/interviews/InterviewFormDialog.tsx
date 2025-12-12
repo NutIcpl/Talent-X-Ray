@@ -24,6 +24,22 @@ const interviewSchema = z.object({
 
 type InterviewFormValues = z.infer<typeof interviewSchema>;
 
+export interface InterviewEvaluationData {
+  interviewDate: string;
+  scores: {
+    skill: number | null;
+    communication: number | null;
+    creativity: number | null;
+    motivation: number | null;
+    teamwork: number | null;
+    problemSolving: number | null;
+    culture: number | null;
+  };
+  totalScore: number;
+  result: 'passed' | 'pending' | 'failed';
+  feedback: string;
+}
+
 export interface Interview {
   id: string;
   name: string;
@@ -39,6 +55,11 @@ export interface Interview {
   candidateEmail?: string;
   managerEmail?: string;
   proposedSlots?: string[];
+  evaluationData?: InterviewEvaluationData | null;
+  sentToFinal?: boolean; // Flag to hide "Send to Final" button after sent
+  firstInterviewScore?: number; // For Final Interview - score from First Interview
+  firstInterviewEvaluation?: InterviewEvaluationData | null; // For Final Interview - evaluation from First Interview
+  waitingForManager?: boolean; // Waiting for Manager to select time slot
 }
 
 interface InterviewFormDialogProps {

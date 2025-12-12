@@ -14,6 +14,7 @@ import { useCandidates } from "@/contexts/CandidatesContext";
 import PrivacyPolicyDialog from "@/components/PrivacyPolicyDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { addSparkleEffect } from "@/lib/sparkle";
+import { generateApplicationFormPDF } from "@/lib/generateApplicationFormPDF";
 
 interface Education {
   level: string;
@@ -145,7 +146,8 @@ const JobApplication = () => {
   });
 
   const [availablePositions, setAvailablePositions] = useState<Array<{id: string; title: string}>>([]);
- 
+  const [isPositionLocked, setIsPositionLocked] = useState(false);
+
   // Fetch available positions from database
   useEffect(() => {
     const fetchPositions = async () => {
@@ -172,6 +174,7 @@ const JobApplication = () => {
     const state = location.state as { jobId?: string; jobTitle?: string } | null;
     if (state?.jobTitle) {
       setFormData(prev => ({ ...prev, position: state.jobTitle }));
+      setIsPositionLocked(true); // Lock the position dropdown
       setAvailablePositions(prev => {
         const exists = prev.some(p => p.title === state.jobTitle);
         return exists ? prev : [{ id: state.jobId || '', title: state.jobTitle! }, ...prev];
@@ -723,6 +726,49 @@ const JobApplication = () => {
         privacy_consent: formData.privacyConsent,
       };
 
+      // Generate PDF application form
+      const submittedAt = new Date().toISOString();
+      let applicationFormUrl = "";
+      try {
+        const pdfBlob = await generateApplicationFormPDF({
+          formData,
+          educations,
+          workExperiences,
+          familyMembers,
+          languageSkills,
+          photoUrl: photoUrl || undefined,
+          resumeUrl: resumeUrl || undefined,
+          submittedAt,
+        });
+
+        // Upload PDF file to storage (bucket: resumes - already supports PDF)
+        const pdfFileName = `application_form_${candidateId}_${Date.now()}.pdf`;
+
+        const { error: pdfUploadError } = await supabase.storage
+          .from('resumes')
+          .upload(pdfFileName, pdfBlob, {
+            contentType: 'application/pdf',
+            cacheControl: '3600',
+          });
+
+        if (pdfUploadError) {
+          console.error('Error uploading application form PDF:', pdfUploadError);
+        } else {
+          const { data: pdfUrlData } = supabase.storage
+            .from('resumes')
+            .getPublicUrl(pdfFileName);
+          applicationFormUrl = pdfUrlData.publicUrl;
+        }
+      } catch (pdfError) {
+        console.error('Error generating/uploading application form PDF:', pdfError);
+      }
+
+      // Add application_form_url to candidate details
+      const candidateDetailsDataWithForm = {
+        ...candidateDetailsData,
+        application_form_url: applicationFormUrl || null,
+      };
+
       // Check if details already exist for this candidate
       const { data: existingDetails } = await supabase
         .from('candidate_details')
@@ -734,7 +780,7 @@ const JobApplication = () => {
         // Update existing details
         const { error: detailsError } = await supabase
           .from('candidate_details')
-          .update(candidateDetailsData)
+          .update(candidateDetailsDataWithForm)
           .eq('id', existingDetails.id);
 
         if (detailsError) {
@@ -744,7 +790,7 @@ const JobApplication = () => {
         // Insert new details
         const { error: detailsError } = await supabase
           .from('candidate_details')
-          .insert(candidateDetailsData);
+          .insert(candidateDetailsDataWithForm);
 
         if (detailsError) {
           console.error('Error inserting candidate details:', detailsError);
@@ -911,25 +957,41 @@ const JobApplication = () => {
                     <Label htmlFor="position" className="text-base font-semibold">
                       Position Applied / ตำแหน่งที่สมัคร <span className="text-destructive">*</span>
                     </Label>
-                    <Select
-                      value={formData.position}
-                      onValueChange={(value) => setFormData({ ...formData, position: value })}
-                    >
-                      <SelectTrigger className="border-2 focus:border-primary">
-                        <SelectValue placeholder="เลือกตำแหน่ง..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availablePositions
-                          .filter((position, index, self) =>
-                            index === self.findIndex((p) => p.title === position.title)
-                          )
-                          .map((position) => (
-                            <SelectItem key={position.id} value={position.title}>
-                              {position.title}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                    {isPositionLocked ? (
+                      <div className="relative">
+                        <Input
+                          value={formData.position}
+                          disabled
+                          className="border-2 bg-primary/5 font-semibold text-primary pr-10"
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                          </svg>
+                        </div>
+                      </div>
+                    ) : (
+                      <Select
+                        value={formData.position}
+                        onValueChange={(value) => setFormData({ ...formData, position: value })}
+                      >
+                        <SelectTrigger className="border-2 focus:border-primary">
+                          <SelectValue placeholder="เลือกตำแหน่ง..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availablePositions
+                            .filter((position, index, self) =>
+                              index === self.findIndex((p) => p.title === position.title)
+                            )
+                            .map((position) => (
+                              <SelectItem key={position.id} value={position.title}>
+                                {position.title}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
 
                   <div className="space-y-2">

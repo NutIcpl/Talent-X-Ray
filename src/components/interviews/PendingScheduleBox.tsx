@@ -2,32 +2,45 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Mail, ChevronDown, ChevronUp } from "lucide-react";
+import { Clock, Mail, ChevronDown, ChevronUp, CalendarCheck, XCircle } from "lucide-react";
 import { Interview } from "./InterviewFormDialog";
 import { toast } from "sonner";
 import { addSparkleEffect } from "@/lib/sparkle";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { format } from "date-fns";
+import { th } from "date-fns/locale";
 
 interface PendingScheduleBoxProps {
   candidates: Interview[];
   onSchedule: (candidateId: string, timeSlot: string) => void;
+  onReject: (candidateId: string) => void;
   bookedSlots: Set<string>;
   compact?: boolean;
 }
 
-const TIME_SLOTS = [
-  "09:00 - 10:00",
-  "10:00 - 11:00", 
-  "11:00 - 12:00",
-  "13:00 - 14:00",
-  "14:00 - 15:00",
-  "15:00 - 16:00",
-  "16:00 - 17:00",
-];
+// Format ISO date to Thai datetime string
+function formatSlotTime(isoString: string): string {
+  try {
+    const date = new Date(isoString);
+    return format(date, "d MMM yyyy HH:mm น.", { locale: th });
+  } catch {
+    return isoString;
+  }
+}
 
-export function PendingScheduleBox({ candidates, onSchedule, bookedSlots, compact = false }: PendingScheduleBoxProps) {
+// Check if slot is an ISO date string
+function isIsoDateString(str: string): boolean {
+  return str.includes("T") || str.includes("-");
+}
+
+export function PendingScheduleBox({ candidates, onSchedule, onReject, bookedSlots, compact = false }: PendingScheduleBoxProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  const handleReject = (candidate: Interview, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onReject(candidate.id);
+  };
 
   const handleSchedule = (candidate: Interview, timeSlot: string, e: React.MouseEvent) => {
     addSparkleEffect(e);
@@ -94,10 +107,10 @@ export function PendingScheduleBox({ candidates, onSchedule, bookedSlots, compac
                     {candidate.proposedSlots && candidate.proposedSlots.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-xs font-medium text-muted-foreground">
-                          เวลาที่ผู้สมัครเสนอ:
+                          เวลาที่ Manager เสนอ:
                         </p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {candidate.proposedSlots.map((slot) => (
+                        <div className="flex flex-col gap-2">
+                          {candidate.proposedSlots.map((slot, index) => (
                             <Button
                               key={slot}
                               size="sm"
@@ -105,38 +118,32 @@ export function PendingScheduleBox({ candidates, onSchedule, bookedSlots, compac
                               onClick={(e) => handleSchedule(candidate, slot, e)}
                               disabled={bookedSlots.has(slot)}
                               className={cn(
-                                "text-xs transition-all",
-                                bookedSlots.has(slot) 
-                                  ? "opacity-40 cursor-not-allowed bg-muted" 
+                                "text-xs transition-all justify-start",
+                                bookedSlots.has(slot)
+                                  ? "opacity-40 cursor-not-allowed bg-muted"
                                   : "hover:bg-primary hover:text-primary-foreground hover:scale-105"
                               )}
                             >
-                              <Clock className="h-3 w-3 mr-1" />
-                              {slot}
+                              <CalendarCheck className="h-3 w-3 mr-2" />
+                              <span className="font-medium mr-1">ช่วง {index + 1}:</span>
+                              {isIsoDateString(slot) ? formatSlotTime(slot) : slot}
                             </Button>
                           ))}
                         </div>
                       </div>
                     )}
-                    
-                    <div className="flex flex-wrap gap-1">
-                      {TIME_SLOTS.filter(slot => !candidate.proposedSlots?.includes(slot)).slice(0, 3).map((slot) => (
-                        <Button
-                          key={slot}
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => handleSchedule(candidate, slot, e)}
-                          disabled={bookedSlots.has(slot)}
-                          className={cn(
-                            "text-xs h-7 transition-all",
-                            bookedSlots.has(slot) 
-                              ? "opacity-40 cursor-not-allowed" 
-                              : "hover:bg-accent hover:scale-105"
-                          )}
-                        >
-                          {slot}
-                        </Button>
-                      ))}
+
+                    {/* Reject Button */}
+                    <div className="pt-2 border-t border-border/30">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => handleReject(candidate, e)}
+                        className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 w-full justify-start"
+                      >
+                        <XCircle className="h-3 w-3 mr-2" />
+                        ปฏิเสธการสัมภาษณ์
+                      </Button>
                     </div>
                   </div>
                 ))
@@ -187,10 +194,10 @@ export function PendingScheduleBox({ candidates, onSchedule, bookedSlots, compac
               {candidate.proposedSlots && candidate.proposedSlots.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">
-                    เวลาที่ผู้สมัครเสนอ:
+                    เวลาที่ Manager เสนอ:
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {candidate.proposedSlots.map((slot) => (
+                  <div className="flex flex-col gap-2">
+                    {candidate.proposedSlots.map((slot, index) => (
                       <Button
                         key={slot}
                         size="sm"
@@ -198,38 +205,32 @@ export function PendingScheduleBox({ candidates, onSchedule, bookedSlots, compac
                         onClick={(e) => handleSchedule(candidate, slot, e)}
                         disabled={bookedSlots.has(slot)}
                         className={cn(
-                          "text-xs transition-all",
-                          bookedSlots.has(slot) 
-                            ? "opacity-40 cursor-not-allowed bg-muted" 
+                          "text-xs transition-all justify-start",
+                          bookedSlots.has(slot)
+                            ? "opacity-40 cursor-not-allowed bg-muted"
                             : "hover:bg-primary hover:text-primary-foreground hover:scale-105"
                         )}
                       >
-                        <Clock className="h-3 w-3 mr-1" />
-                        {slot}
+                        <CalendarCheck className="h-3 w-3 mr-2" />
+                        <span className="font-medium mr-1">ช่วง {index + 1}:</span>
+                        {isIsoDateString(slot) ? formatSlotTime(slot) : slot}
                       </Button>
                     ))}
                   </div>
                 </div>
               )}
-              
-              <div className="flex flex-wrap gap-1">
-                {TIME_SLOTS.filter(slot => !candidate.proposedSlots?.includes(slot)).slice(0, 3).map((slot) => (
-                  <Button
-                    key={slot}
-                    size="sm"
-                    variant="ghost"
-                    onClick={(e) => handleSchedule(candidate, slot, e)}
-                    disabled={bookedSlots.has(slot)}
-                    className={cn(
-                      "text-xs h-7 transition-all",
-                      bookedSlots.has(slot) 
-                        ? "opacity-40 cursor-not-allowed" 
-                        : "hover:bg-accent hover:scale-105"
-                    )}
-                  >
-                    {slot}
-                  </Button>
-                ))}
+
+              {/* Reject Button */}
+              <div className="pt-2 border-t border-border/30">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => handleReject(candidate, e)}
+                  className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10 w-full justify-start"
+                >
+                  <XCircle className="h-3 w-3 mr-2" />
+                  ปฏิเสธการสัมภาษณ์
+                </Button>
               </div>
             </div>
           ))

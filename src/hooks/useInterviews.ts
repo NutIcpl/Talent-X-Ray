@@ -59,16 +59,17 @@ export function useInterviews() {
         const application = interview.applications;
         const candidate = application?.candidates;
         const position = application?.job_positions;
-        
+
         // Parse proposed slots from notes if exists
         let proposedSlots: { date: string; time: string }[] | undefined;
         let interviewRound: "first" | "final" | "pre_screen" | undefined;
-        
+        let notesData: any = null;
+
         if (interview.notes) {
           try {
-            const notesData = JSON.parse(interview.notes);
+            notesData = JSON.parse(interview.notes);
             proposedSlots = notesData.proposedSlots;
-            if (notesData.source === "manager_selection") {
+            if (notesData.source === "manager_selection" || notesData.source === "manager_portal") {
               interviewRound = "first";
             } else if (notesData.type === "pre_screen") {
               interviewRound = "pre_screen";
@@ -80,6 +81,11 @@ export function useInterviews() {
           }
         }
 
+        // Get candidate name and position from notes if not from application (manager portal case)
+        const candidateName = candidate?.name || notesData?.candidate_name || "ไม่ระบุ";
+        const positionTitle = position?.title || notesData?.position || "ไม่ระบุตำแหน่ง";
+        const candidateEmail = candidate?.email || "";
+
         return {
           id: interview.id,
           application_id: interview.application_id,
@@ -90,9 +96,9 @@ export function useInterviews() {
           notes: interview.notes,
           score: interview.score,
           created_at: interview.created_at,
-          candidate_name: candidate?.name || "ไม่ระบุ",
-          candidate_email: candidate?.email || "",
-          position_title: position?.title || "ไม่ระบุตำแหน่ง",
+          candidate_name: candidateName,
+          candidate_email: candidateEmail,
+          position_title: positionTitle,
           proposed_slots: proposedSlots,
           interview_round: interviewRound,
         } as InterviewData;
@@ -110,16 +116,56 @@ export function useInterviews() {
       scheduledAt: string;
       timeSlot: string;
     }) => {
+      // First get the existing interview to preserve notes data and get application info
+      const { data: existingInterview } = await supabase
+        .from("interviews")
+        .select(`
+          notes,
+          applications (
+            id,
+            candidate_id
+          )
+        `)
+        .eq("id", interviewId)
+        .single();
+
+      // Merge existing notes with new scheduled time
+      let updatedNotes: any = { scheduledTime: timeSlot };
+      let interviewType: "first_interview" | "final_interview" = "first_interview";
+
+      if (existingInterview?.notes) {
+        try {
+          const existingNotes = JSON.parse(existingInterview.notes);
+          updatedNotes = { ...existingNotes, scheduledTime: timeSlot };
+          // Determine interview type from notes
+          if (existingNotes.type === "final_interview" || existingNotes.source === "sent_from_first_interview") {
+            interviewType = "final_interview";
+          }
+        } catch {
+          // notes is plain text, keep new format
+        }
+      }
+
       const { error } = await supabase
         .from("interviews")
         .update({
           scheduled_at: scheduledAt,
           status: "scheduled",
-          notes: JSON.stringify({ scheduledTime: timeSlot }),
+          notes: JSON.stringify(updatedNotes),
         })
         .eq("id", interviewId);
 
       if (error) throw error;
+
+      // Update candidate stage based on interview type
+      const candidateId = (existingInterview as any)?.applications?.candidate_id;
+      if (candidateId) {
+        const newStage = interviewType === "final_interview" ? "Final_Interview" : "First_Interview";
+        await supabase
+          .from("candidates")
+          .update({ stage: newStage })
+          .eq("id", candidateId);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["interviews"] });
@@ -221,6 +267,107 @@ export function useInterviews() {
     },
   });
 
+  const rejectInterviewMutation = useMutation({
+    mutationFn: async ({ interviewId }: { interviewId: string }) => {
+      // Get candidate_id from interview
+      const { data: interview } = await supabase
+        .from("interviews")
+        .select(`
+          applications (
+            candidate_id
+          )
+        `)
+        .eq("id", interviewId)
+        .single();
+
+      const { error } = await supabase
+        .from("interviews")
+        .update({
+          result: "rejected",
+          status: "completed",
+        })
+        .eq("id", interviewId);
+
+      if (error) throw error;
+
+      // Update candidate stage to Interview_Rejected
+      const candidateId = (interview as any)?.applications?.candidate_id;
+      if (candidateId) {
+        await supabase
+          .from("candidates")
+          .update({ stage: "Interview_Rejected" })
+          .eq("id", candidateId);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["interviews"] });
+      queryClient.invalidateQueries({ queryKey: ["candidates-data"] });
+      toast({
+        title: "ปฏิเสธการสัมภาษณ์สำเร็จ",
+        description: "ย้ายผู้สมัครไปยังกล่องปฏิเสธการสัมภาษณ์แล้ว",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const hireCandidateMutation = useMutation({
+    mutationFn: async ({ candidateId }: { candidateId: string }) => {
+      const { error } = await supabase
+        .from("candidates")
+        .update({ stage: "Hired" })
+        .eq("id", candidateId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["interviews"] });
+      queryClient.invalidateQueries({ queryKey: ["candidates-data"] });
+      toast({
+        title: "จ้างงานสำเร็จ",
+        description: "ย้ายผู้สมัครไปยังกล่อง Hired แล้ว",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const notHireCandidateMutation = useMutation({
+    mutationFn: async ({ candidateId }: { candidateId: string }) => {
+      const { error } = await supabase
+        .from("candidates")
+        .update({ stage: "Not_Offer" })
+        .eq("id", candidateId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["interviews"] });
+      queryClient.invalidateQueries({ queryKey: ["candidates-data"] });
+      toast({
+        title: "บันทึกสำเร็จ",
+        description: "ย้ายผู้สมัครไปยังกล่อง Not Offer แล้ว",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Filter interviews by status
   const pendingInterviews = interviews.filter((i) => i.status === "pending");
   const scheduledInterviews = interviews.filter((i) => i.status === "scheduled");
@@ -237,5 +384,8 @@ export function useInterviews() {
     scheduleInterview: scheduleInterviewMutation.mutate,
     updateInterview: updateInterviewMutation.mutate,
     createInterview: createInterviewMutation.mutate,
+    rejectInterview: rejectInterviewMutation.mutate,
+    hireCandidate: hireCandidateMutation.mutate,
+    notHireCandidate: notHireCandidateMutation.mutate,
   };
 }

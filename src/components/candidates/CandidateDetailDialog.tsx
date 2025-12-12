@@ -15,7 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Mail, Phone, MapPin, Calendar, Briefcase, GraduationCap, Star, FileText, Edit, Trash2, CheckCircle2, Circle, Heart, X, Download, User, Sparkles, Loader2 } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Briefcase, GraduationCap, Star, FileText, Edit, Trash2, CheckCircle2, Circle, Heart, X, Download, User, Sparkles, Loader2, Info } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SingleInterviewDialog } from "./SingleInterviewDialog";
 import { CombinedInterviewDialog } from "./CombinedInterviewDialog";
 import { TestScoreDialog } from "./TestScoreDialog";
@@ -145,11 +146,77 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
     education?: number;
     skills?: number;
   } | null>(null);
+  const [aiReasoning, setAiReasoning] = useState<{
+    reasoning: string;
+    strengths: string[];
+    concerns: string[];
+    recommendation: string;
+  } | null>(null);
 
-  // Reset state when candidate changes
+  // Load AI reasoning from database when candidate changes
   useEffect(() => {
-    setCurrentScore(null);
-    setScoreBreakdown(null);
+    const loadAiReasoning = async () => {
+      if (!candidate?.id) {
+        setCurrentScore(null);
+        setScoreBreakdown(null);
+        setAiReasoning(null);
+        return;
+      }
+
+      // Try to get stored AI data from application
+      const { data: application } = await supabase
+        .from('applications')
+        .select('ai_fit_score, ai_fit_reasoning, notes')
+        .eq('candidate_id', candidate.id)
+        .maybeSingle();
+
+      if (application) {
+        if (application.ai_fit_score) {
+          setCurrentScore(application.ai_fit_score);
+        }
+
+        // Parse notes which contains breakdown, strengths, concerns, recommendation
+        if (application.notes) {
+          try {
+            const aiData = JSON.parse(application.notes);
+            if (aiData.breakdown) {
+              setScoreBreakdown(aiData.breakdown);
+            }
+            if (aiData.reasoning || application.ai_fit_reasoning || aiData.strengths || aiData.concerns || aiData.recommendation) {
+              setAiReasoning({
+                reasoning: application.ai_fit_reasoning || aiData.reasoning || '',
+                strengths: aiData.strengths || [],
+                concerns: aiData.concerns || [],
+                recommendation: aiData.recommendation || '',
+              });
+            }
+          } catch (e) {
+            // notes might not be JSON, that's ok
+            if (application.ai_fit_reasoning) {
+              setAiReasoning({
+                reasoning: application.ai_fit_reasoning,
+                strengths: [],
+                concerns: [],
+                recommendation: '',
+              });
+            }
+          }
+        } else if (application.ai_fit_reasoning) {
+          setAiReasoning({
+            reasoning: application.ai_fit_reasoning,
+            strengths: [],
+            concerns: [],
+            recommendation: '',
+          });
+        }
+      } else {
+        setCurrentScore(null);
+        setScoreBreakdown(null);
+        setAiReasoning(null);
+      }
+    };
+
+    loadAiReasoning();
   }, [candidate?.id]);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [showTestScoreDialog, setShowTestScoreDialog] = useState(false);
@@ -276,7 +343,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
     onTestScoreUpdate(candidate.id, testScores);
   };
 
-  const handleSingleInterviewSave = (interviewData: { date: string; passed: boolean; feedback: string }) => {
+  const handleSingleInterviewSave = async (interviewData: { date: string; passed: boolean; feedback: string }) => {
     // Save to database if it's HR/Pre-screen interview
     if (activeInterview === 'hr' && candidate.application_id) {
       updatePreScreen({
@@ -285,8 +352,32 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
         passed: interviewData.passed,
         feedback: interviewData.feedback,
       });
+
+      // Auto-change candidate status based on Pre-Screen result
+      const newStage = interviewData.passed ? 'Interested' : 'Rejected';
+      try {
+        await supabase
+          .from('candidates')
+          .update({ stage: newStage })
+          .eq('id', candidate.id);
+
+        // Invalidate queries to refresh data
+        queryClient.invalidateQueries({ queryKey: ['candidates-data'] });
+
+        // Notify user
+        addNotification({
+          type: 'status_change',
+          title: 'เปลี่ยนสถานะผู้สมัคร',
+          description: `${candidate.name} - Pre-Screen ${interviewData.passed ? 'ผ่าน' : 'ไม่ผ่าน'} → ${interviewData.passed ? 'Interested' : 'Not Interested'}`,
+          candidateName: candidate.name,
+          oldStatus: candidate.stage || 'Pending',
+          newStatus: interviewData.passed ? 'Interested' : 'Not Interested',
+        });
+      } catch (error) {
+        console.error('Error updating candidate stage:', error);
+      }
     }
-    
+
     const updatedInterviews = {
       ...candidate.interviews,
       [activeInterview as string]: interviewData,
@@ -453,6 +544,13 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
             if (data.breakdown) {
               setScoreBreakdown(data.breakdown);
             }
+            // Save AI reasoning data
+            setAiReasoning({
+              reasoning: data.reasoning || '',
+              strengths: data.strengths || [],
+              concerns: data.concerns || [],
+              recommendation: data.recommendation || '',
+            });
             // Invalidate queries to refresh data
             queryClient.invalidateQueries({ queryKey: ["candidates-data"] });
           },
@@ -626,29 +724,54 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
 
           <Separator />
 
-          {/* Resume File */}
-          {(candidate.resumeUrl || candidate.resume_url) && (
+          {/* Documents Section */}
+          {(candidate.resumeUrl || candidate.resume_url || candidateDetails?.application_form_url) && (
             <div>
               <h3 className="text-lg font-semibold mb-3">เอกสารประกอบการสมัคร</h3>
-              <div className="flex items-center gap-3 p-4 border rounded-lg bg-muted/20 hover:bg-muted/30 transition-colors">
-                <FileText className="h-8 w-8 text-primary" />
-                <div className="flex-1">
-                  <div className="font-medium">Resume / CV</div>
-                  <div className="text-sm text-muted-foreground">คลิกเพื่อดูไฟล์ Resume ฉบับเต็ม</div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => window.open(candidate.resumeUrl || candidate.resume_url || '', '_blank')}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  เปิดดู
-                </Button>
+              <div className="space-y-3">
+                {/* Application Form PDF */}
+                {candidateDetails?.application_form_url && (
+                  <div className="flex items-center gap-3 p-4 border rounded-lg bg-gradient-to-r from-primary/5 to-secondary/5 hover:from-primary/10 hover:to-secondary/10 transition-colors">
+                    <FileText className="h-8 w-8 text-secondary" />
+                    <div className="flex-1">
+                      <div className="font-medium">ใบสมัครงาน (Application Form)</div>
+                      <div className="text-sm text-muted-foreground">ใบสมัครงานฉบับเต็มที่ผู้สมัครกรอกผ่านระบบ (PDF)</div>
+                    </div>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                      onClick={() => window.open(candidateDetails.application_form_url || '', '_blank')}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      ดู PDF
+                    </Button>
+                  </div>
+                )}
+
+                {/* Resume / CV */}
+                {(candidate.resumeUrl || candidate.resume_url) && (
+                  <div className="flex items-center gap-3 p-4 border rounded-lg bg-muted/20 hover:bg-muted/30 transition-colors">
+                    <FileText className="h-8 w-8 text-primary" />
+                    <div className="flex-1">
+                      <div className="font-medium">Resume / CV</div>
+                      <div className="text-sm text-muted-foreground">คลิกเพื่อดูไฟล์ Resume ฉบับเต็ม</div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(candidate.resumeUrl || candidate.resume_url || '', '_blank')}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      เปิดดู
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {(candidate.resumeUrl || candidate.resume_url) && <Separator />}
+          {(candidate.resumeUrl || candidate.resume_url || candidateDetails?.application_form_url) && <Separator />}
 
           {/* Position & Experience */}
           <div>
@@ -751,49 +874,6 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
             </p>
           </div>
 
-          <Separator />
-
-          {/* Pipeline Status */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">สถานะการสรรหา</h3>
-            <div className="flex items-center justify-between gap-2">
-              {pipelineSteps.map((step, index) => {
-                const isCompleted = currentPipelineIndex >= index;
-                const isCurrent = currentPipelineIndex === index;
-                return (
-                  <div key={step.key} className="flex items-center flex-1">
-                    <div className="flex flex-col items-center flex-1">
-                      <button
-                        onClick={() => handlePipelineStepClick(step.key)}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
-                          isCompleted 
-                            ? 'bg-primary border-primary text-primary-foreground hover:scale-110' 
-                            : 'bg-background border-muted-foreground/30 text-muted-foreground hover:border-primary/50 hover:scale-110'
-                        } ${!isCurrent && 'cursor-pointer'}`}
-                        disabled={isCurrent}
-                      >
-                        {isCompleted ? (
-                          <CheckCircle2 className="h-5 w-5" />
-                        ) : (
-                          <Circle className="h-5 w-5" />
-                        )}
-                      </button>
-                      <span className={`text-xs mt-2 text-center ${isCurrent ? 'font-semibold' : 'text-muted-foreground'}`}>
-                        {step.label}
-                      </span>
-                    </div>
-                    {index < pipelineSteps.length - 1 && (
-                      <div className={`h-0.5 flex-1 -mt-6 ${
-                        currentPipelineIndex > index ? 'bg-primary' : 'bg-muted-foreground/30'
-                      }`} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <Separator />
 
           {/* Skills */}
           {(candidate.skills && candidate.skills.length > 0) && (
@@ -833,6 +913,60 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                     </>
                   )}
                 </Button>
+                {/* AI Reasoning Info Button */}
+                {aiReasoning && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600"
+                      >
+                        <Info className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-96 p-4" align="start">
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-primary" />
+                            AI Analysis
+                          </h4>
+                          <p className="text-sm text-muted-foreground">{aiReasoning.reasoning}</p>
+                        </div>
+
+                        {aiReasoning.strengths.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-sm mb-2 text-green-600">✓ จุดแข็ง</h4>
+                            <ul className="text-sm space-y-1">
+                              {aiReasoning.strengths.map((s, i) => (
+                                <li key={i} className="text-muted-foreground">• {s}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {aiReasoning.concerns.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-sm mb-2 text-orange-600">⚠ ข้อควรพิจารณา</h4>
+                            <ul className="text-sm space-y-1">
+                              {aiReasoning.concerns.map((c, i) => (
+                                <li key={i} className="text-muted-foreground">• {c}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {aiReasoning.recommendation && (
+                          <div className="pt-2 border-t">
+                            <h4 className="font-semibold text-sm mb-2 text-primary">💡 คำแนะนำ</h4>
+                            <p className="text-sm text-muted-foreground">{aiReasoning.recommendation}</p>
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
               </div>
               <div className="text-2xl font-bold text-primary">
                 {currentScore ?? candidate.score ?? candidate.ai_fit_score ?? '-'}%
@@ -908,34 +1042,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
 
           <Separator />
 
-          {/* Test Scores */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">คะแนนแบบทดสอบ</h3>
-              <Button variant="outline" size="sm" onClick={() => setShowTestScoreDialog(true)}>
-                <Edit className="h-4 w-4 mr-2" />
-                แก้ไข
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 border rounded-lg bg-muted/20">
-                <div className="text-sm text-muted-foreground mb-1">แบบทดสอบส่วนกลาง (HR)</div>
-                <div className="text-3xl font-bold text-primary">
-                  {candidateDetails?.hr_test_score ?? candidate.testScores?.hrTest ?? "-"}
-                </div>
-              </div>
-              <div className="p-4 border rounded-lg bg-muted/20">
-                <div className="text-sm text-muted-foreground mb-1">แบบทดสอบเฉพาะแผนก</div>
-                <div className="text-3xl font-bold text-primary">
-                  {candidateDetails?.department_test_score ?? candidate.testScores?.departmentTest ?? "-"}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Interview Details */}
+          {/* Interview Details - Moved above Test Scores */}
           <div>
             <h3 className="text-lg font-semibold mb-4">ข้อมูลการสัมภาษณ์</h3>
             <div className="space-y-4">
@@ -973,7 +1080,20 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                   </div>
                   <div className="col-span-3">
                     <div className="text-muted-foreground mb-1">Comment</div>
-                    <div>{preScreenInterview?.notes || candidate.interviews?.hr?.feedback || "-"}</div>
+                    <div>
+                      {(() => {
+                        // Try to parse notes as JSON to get feedback
+                        if (preScreenInterview?.notes) {
+                          try {
+                            const notesData = JSON.parse(preScreenInterview.notes);
+                            return notesData.feedback || preScreenInterview.notes;
+                          } catch {
+                            return preScreenInterview.notes;
+                          }
+                        }
+                        return candidate.interviews?.hr?.feedback || "-";
+                      })()}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -987,7 +1107,7 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                     แก้ไข
                   </Button>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   {/* First Interview (Manager) */}
                   <div className="space-y-3">
@@ -996,29 +1116,66 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                       <div>
                         <div className="text-muted-foreground mb-1">วันที่สัมภาษณ์</div>
                         <div>
-                          {firstInterview?.scheduled_at 
-                            ? new Date(firstInterview.scheduled_at).toLocaleDateString('th-TH')
-                            : candidate.interviews?.manager?.date || "-"}
+                          {(() => {
+                            // Try to get date from evaluation first
+                            if (firstInterview?.notes) {
+                              try {
+                                const data = JSON.parse(firstInterview.notes);
+                                if (data.evaluation?.interviewDate) return data.evaluation.interviewDate;
+                              } catch {}
+                            }
+                            if (firstInterview?.scheduled_at) {
+                              return new Date(firstInterview.scheduled_at).toLocaleDateString('th-TH');
+                            }
+                            return candidate.interviews?.manager?.date || "-";
+                          })()}
                         </div>
                       </div>
                       <div>
                         <div className="text-muted-foreground mb-1">คะแนนรวม</div>
                         <div className="font-semibold text-primary">
-                          {firstInterview?.score || candidate.interviews?.manager?.total_score || "-"} / 70
+                          {(() => {
+                            // Try to get score from evaluation first
+                            if (firstInterview?.notes) {
+                              try {
+                                const data = JSON.parse(firstInterview.notes);
+                                if (data.evaluation?.totalScore) return data.evaluation.totalScore;
+                              } catch {}
+                            }
+                            return firstInterview?.score || candidate.interviews?.manager?.total_score || "-";
+                          })()} / 70
                         </div>
                       </div>
                       <div>
                         <div className="text-muted-foreground mb-1">ผลการสัมภาษณ์</div>
                         <div>
-                          {firstInterview?.result ? (
-                            <Badge variant={firstInterview.result === "passed" ? "default" : "destructive"}>
-                              {firstInterview.result === "passed" ? "ผ่าน" : "ไม่ผ่าน"}
-                            </Badge>
-                          ) : candidate.interviews?.manager?.passed !== undefined ? (
-                            <Badge variant={candidate.interviews.manager.passed ? "default" : "destructive"}>
-                              {candidate.interviews.manager.passed ? "ผ่าน" : "ไม่ผ่าน"}
-                            </Badge>
-                          ) : "-"}
+                          {(() => {
+                            // Try to get result from evaluation first
+                            let result: string | null = null;
+                            if (firstInterview?.notes) {
+                              try {
+                                const data = JSON.parse(firstInterview.notes);
+                                if (data.evaluation?.result) result = data.evaluation.result;
+                              } catch {}
+                            }
+                            if (!result) result = firstInterview?.result || null;
+
+                            if (result) {
+                              return (
+                                <Badge variant={result === "passed" ? "default" : "destructive"}>
+                                  {result === "passed" ? "ผ่าน" : "ไม่ผ่าน"}
+                                </Badge>
+                              );
+                            }
+                            if (candidate.interviews?.manager?.passed !== undefined) {
+                              return (
+                                <Badge variant={candidate.interviews.manager.passed ? "default" : "destructive"}>
+                                  {candidate.interviews.manager.passed ? "ผ่าน" : "ไม่ผ่าน"}
+                                </Badge>
+                              );
+                            }
+                            return "-";
+                          })()}
                         </div>
                       </div>
                       <div>
@@ -1028,7 +1185,8 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                             if (firstInterview?.notes) {
                               try {
                                 const data = JSON.parse(firstInterview.notes);
-                                return data.feedback || "-";
+                                // Check evaluation.feedback first, then direct feedback
+                                return data.evaluation?.feedback || data.feedback || "-";
                               } catch {
                                 return firstInterview.notes;
                               }
@@ -1047,29 +1205,66 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                       <div>
                         <div className="text-muted-foreground mb-1">วันที่สัมภาษณ์</div>
                         <div>
-                          {finalInterview?.scheduled_at 
-                            ? new Date(finalInterview.scheduled_at).toLocaleDateString('th-TH')
-                            : candidate.interviews?.isTeam?.date || "-"}
+                          {(() => {
+                            // Try to get date from evaluation first
+                            if (finalInterview?.notes) {
+                              try {
+                                const data = JSON.parse(finalInterview.notes);
+                                if (data.evaluation?.interviewDate) return data.evaluation.interviewDate;
+                              } catch {}
+                            }
+                            if (finalInterview?.scheduled_at) {
+                              return new Date(finalInterview.scheduled_at).toLocaleDateString('th-TH');
+                            }
+                            return candidate.interviews?.isTeam?.date || "-";
+                          })()}
                         </div>
                       </div>
                       <div>
                         <div className="text-muted-foreground mb-1">คะแนนรวม</div>
                         <div className="font-semibold text-primary">
-                          {finalInterview?.score || candidate.interviews?.isTeam?.total_score || "-"} / 70
+                          {(() => {
+                            // Try to get score from evaluation first
+                            if (finalInterview?.notes) {
+                              try {
+                                const data = JSON.parse(finalInterview.notes);
+                                if (data.evaluation?.totalScore) return data.evaluation.totalScore;
+                              } catch {}
+                            }
+                            return finalInterview?.score || candidate.interviews?.isTeam?.total_score || "-";
+                          })()} / 70
                         </div>
                       </div>
                       <div>
                         <div className="text-muted-foreground mb-1">ผลการสัมภาษณ์</div>
                         <div>
-                          {finalInterview?.result ? (
-                            <Badge variant={finalInterview.result === "passed" ? "default" : "destructive"}>
-                              {finalInterview.result === "passed" ? "ผ่าน" : "ไม่ผ่าน"}
-                            </Badge>
-                          ) : candidate.interviews?.isTeam?.passed !== undefined ? (
-                            <Badge variant={candidate.interviews.isTeam.passed ? "default" : "destructive"}>
-                              {candidate.interviews.isTeam.passed ? "ผ่าน" : "ไม่ผ่าน"}
-                            </Badge>
-                          ) : "-"}
+                          {(() => {
+                            // Try to get result from evaluation first
+                            let result: string | null = null;
+                            if (finalInterview?.notes) {
+                              try {
+                                const data = JSON.parse(finalInterview.notes);
+                                if (data.evaluation?.result) result = data.evaluation.result;
+                              } catch {}
+                            }
+                            if (!result) result = finalInterview?.result || null;
+
+                            if (result) {
+                              return (
+                                <Badge variant={result === "passed" ? "default" : "destructive"}>
+                                  {result === "passed" ? "ผ่าน" : "ไม่ผ่าน"}
+                                </Badge>
+                              );
+                            }
+                            if (candidate.interviews?.isTeam?.passed !== undefined) {
+                              return (
+                                <Badge variant={candidate.interviews.isTeam.passed ? "default" : "destructive"}>
+                                  {candidate.interviews.isTeam.passed ? "ผ่าน" : "ไม่ผ่าน"}
+                                </Badge>
+                              );
+                            }
+                            return "-";
+                          })()}
                         </div>
                       </div>
                       <div>
@@ -1079,7 +1274,8 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                             if (finalInterview?.notes) {
                               try {
                                 const data = JSON.parse(finalInterview.notes);
-                                return data.feedback || "-";
+                                // Check evaluation.feedback first, then direct feedback
+                                return data.evaluation?.feedback || data.feedback || "-";
                               } catch {
                                 return finalInterview.notes;
                               }
@@ -1090,6 +1286,33 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Test Scores - Moved below Interview Details */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">คะแนนแบบทดสอบ</h3>
+              <Button variant="outline" size="sm" onClick={() => setShowTestScoreDialog(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                แก้ไข
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 border rounded-lg bg-muted/20">
+                <div className="text-sm text-muted-foreground mb-1">แบบทดสอบส่วนกลาง (HR)</div>
+                <div className="text-3xl font-bold text-primary">
+                  {candidateDetails?.hr_test_score ?? candidate.testScores?.hrTest ?? "-"}
+                </div>
+              </div>
+              <div className="p-4 border rounded-lg bg-muted/20">
+                <div className="text-sm text-muted-foreground mb-1">แบบทดสอบเฉพาะแผนก</div>
+                <div className="text-3xl font-bold text-primary">
+                  {candidateDetails?.department_test_score ?? candidate.testScores?.departmentTest ?? "-"}
                 </div>
               </div>
             </div>
@@ -1147,11 +1370,22 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
       <SingleInterviewDialog
         title="แก้ไขการสัมภาษณ์โดย HR"
         interview={preScreenInterview ? {
-          date: preScreenInterview.scheduled_at 
+          date: preScreenInterview.scheduled_at
             ? new Date(preScreenInterview.scheduled_at).toLocaleDateString('en-GB').split('/').join('/')
             : '',
           passed: preScreenInterview.result === "passed",
-          feedback: preScreenInterview.notes || '',
+          feedback: (() => {
+            // Parse notes to extract feedback
+            if (preScreenInterview.notes) {
+              try {
+                const notesData = JSON.parse(preScreenInterview.notes);
+                return notesData.feedback || '';
+              } catch {
+                return preScreenInterview.notes;
+              }
+            }
+            return '';
+          })(),
         } : candidate.interviews?.hr}
         open={activeInterview === 'hr'}
         onOpenChange={(open) => !open && setActiveInterview(null)}
@@ -1161,8 +1395,58 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
       <CombinedInterviewDialog
         candidateName={candidate.name}
         position={candidate.position || candidate.position_title || ''}
-        managerInterview={candidate.interviews?.manager}
-        isInterview={candidate.interviews?.isTeam}
+        managerInterview={(() => {
+          // Try to get data from database first
+          if (firstInterview?.notes) {
+            try {
+              const notes = JSON.parse(firstInterview.notes);
+              const evaluation = notes.evaluation || {};
+              const scores = evaluation.scores || notes.scores || {};
+              return {
+                date: evaluation.interviewDate || (firstInterview.scheduled_at ? new Date(firstInterview.scheduled_at).toLocaleDateString('en-GB') : ''),
+                passed: firstInterview.result === 'passed' || evaluation.result === 'passed',
+                feedback: evaluation.feedback || notes.feedback || '',
+                scores: {
+                  skill_knowledge: scores.skill || scores.skill_knowledge,
+                  communication: scores.communication,
+                  creativity: scores.creativity,
+                  motivation: scores.motivation,
+                  teamwork: scores.teamwork,
+                  analytical: scores.problemSolving || scores.analytical,
+                  culture_fit: scores.culture || scores.culture_fit,
+                },
+              };
+            } catch {}
+          }
+          // Fallback to candidate.interviews
+          return candidate.interviews?.manager;
+        })()}
+        isInterview={(() => {
+          // Try to get data from database first
+          if (finalInterview?.notes) {
+            try {
+              const notes = JSON.parse(finalInterview.notes);
+              const evaluation = notes.evaluation || {};
+              const scores = evaluation.scores || notes.scores || {};
+              return {
+                date: evaluation.interviewDate || (finalInterview.scheduled_at ? new Date(finalInterview.scheduled_at).toLocaleDateString('en-GB') : ''),
+                passed: finalInterview.result === 'passed' || evaluation.result === 'passed',
+                feedback: evaluation.feedback || notes.feedback || '',
+                scores: {
+                  skill_knowledge: scores.skill || scores.skill_knowledge,
+                  communication: scores.communication,
+                  creativity: scores.creativity,
+                  motivation: scores.motivation,
+                  teamwork: scores.teamwork,
+                  analytical: scores.problemSolving || scores.analytical,
+                  culture_fit: scores.culture || scores.culture_fit,
+                },
+              };
+            } catch {}
+          }
+          // Fallback to candidate.interviews
+          return candidate.interviews?.isTeam;
+        })()}
         open={combinedInterviewOpen}
         onOpenChange={setCombinedInterviewOpen}
         onSave={handleCombinedInterviewSave}

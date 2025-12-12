@@ -29,6 +29,8 @@ interface EmailRequest {
   senderRole?: string;
   candidates: Candidate[];
   positions: string;
+  portalUrl?: string;
+  isFinalInterview?: boolean;
 }
 
 async function getAccessToken(): Promise<string> {
@@ -61,29 +63,78 @@ async function getAccessToken(): Promise<string> {
 
 async function sendEmail(accessToken: string, emailData: EmailRequest, senderEmail: string) {
   const senderRole = emailData.senderRole || 'HR';
-  
+  const portalUrl = emailData.portalUrl || '#';
+  const isFinalInterview = emailData.isFinalInterview || false;
+
   // Count candidates with resume files
   const candidatesWithResume = emailData.candidates.filter(c => c.resume_url).length;
-  
-  const candidatesTableRows = emailData.candidates
+  const candidateCount = emailData.candidates.length;
+
+  // Generate candidate cards HTML
+  const candidateCards = emailData.candidates
     .map((c, index) => {
-      const rowBg = index % 2 === 0 ? '#f0fdf4' : '#ffffff';
       const scorePercentage = c.ai_score || 0;
+      const scoreColor = scorePercentage >= 80 ? '#10b981' : scorePercentage >= 60 ? '#f59e0b' : '#ef4444';
       return `
-      <tr style="background-color: ${rowBg}; transition: all 0.3s ease;">
-        <td style="padding: 16px 12px; border-bottom: 2px solid #e5e7eb; text-align: center; font-weight: 600; color: #059669; font-size: 15px;">${index + 1}</td>
-        <td style="padding: 16px 12px; border-bottom: 2px solid #e5e7eb; font-weight: 500; color: #111827; font-size: 14px;">${c.name}</td>
-        <td style="padding: 16px 12px; border-bottom: 2px solid #e5e7eb; color: #374151; font-size: 14px;">${c.position}</td>
-        <td style="padding: 16px 12px; border-bottom: 2px solid #e5e7eb; text-align: center;">
-          <div style="display: inline-flex; align-items: center; justify-content: center; min-width: 70px; padding: 6px 16px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; font-weight: 700; font-size: 16px; border-radius: 20px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
-            ${scorePercentage}%
-          </div>
-        </td>
-        <td style="padding: 16px 12px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-size: 13px; line-height: 1.6;">${c.pre_screen_comment || '-'}</td>
-      </tr>
-    `;
+        <tr>
+          <td style="padding: 8px;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden;">
+              <tr>
+                <td style="padding: 20px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td width="50" valign="top">
+                        <div style="width: 44px; height: 44px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 700; font-size: 18px; text-align: center; line-height: 44px;">
+                          ${c.name.charAt(0).toUpperCase()}
+                        </div>
+                      </td>
+                      <td style="padding-left: 16px;" valign="top">
+                        <p style="margin: 0 0 4px 0; font-size: 16px; font-weight: 600; color: #1f2937;">${c.name}</p>
+                        <p style="margin: 0; font-size: 13px; color: #6b7280;">${c.position}</p>
+                      </td>
+                      <td width="80" align="right" valign="top">
+                        <div style="display: inline-block; padding: 8px 16px; background: ${scoreColor}15; border-radius: 20px;">
+                          <span style="font-size: 18px; font-weight: 700; color: ${scoreColor};">${scorePercentage}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                  ${c.pre_screen_comment ? `
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 16px;">
+                      <tr>
+                        <td style="padding: 12px 16px; background: #f8fafc; border-radius: 8px; border-left: 3px solid #6366f1;">
+                          <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px;">Pre-Screen Comment</p>
+                          <p style="margin: 0; font-size: 13px; color: #4b5563; line-height: 1.5;">${c.pre_screen_comment}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  ` : ''}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      `;
     })
     .join('');
+
+  // Different styling for Final Interview
+  const headerGradient = isFinalInterview
+    ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)'
+    : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)';
+  const primaryColor = isFinalInterview ? '#d97706' : '#6366f1';
+  const headerTitle = isFinalInterview ? 'Final Interview' : 'ผู้สมัครรอพิจารณา';
+  const headerSubtitle = isFinalInterview
+    ? `ผู้สมัครผ่าน First Interview | ตำแหน่ง ${emailData.positions}`
+    : `${candidateCount} คน | ตำแหน่ง ${emailData.positions}`;
+  const greetingMessage = isFinalInterview
+    ? `ฝ่าย <strong style="color: ${primaryColor};">${senderRole}</strong> ขอส่งรายชื่อผู้สมัครที่ผ่านการสัมภาษณ์ First Interview แล้ว
+       เพื่อให้ท่านพิจารณานัดสัมภาษณ์รอบสุดท้าย (Final Interview)`
+    : `ฝ่าย <strong style="color: ${primaryColor};">${senderRole}</strong> ขอส่งรายชื่อผู้สมัครที่ผ่านการ Pre-Screen เบื้องต้น
+       เพื่อให้ท่านพิจารณาคัดเลือกผู้ที่สนใจนัดสัมภาษณ์`;
+  const ctaButtonText = isFinalInterview
+    ? 'นัดสัมภาษณ์ Final Interview'
+    : 'ดูรายละเอียดและนัดสัมภาษณ์';
 
   const emailBody = `
     <!DOCTYPE html>
@@ -91,93 +142,137 @@ async function sendEmail(accessToken: string, emailData: EmailRequest, senderEma
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${isFinalInterview ? 'Final Interview' : 'Resume ผู้สมัครงาน'}</title>
     </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 40px 20px;">
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f1f5f9; -webkit-font-smoothing: antialiased;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f1f5f9; padding: 40px 20px;">
         <tr>
           <td align="center">
-            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
-              <!-- Header -->
+            <!-- Main Container -->
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08); overflow: hidden;">
+
+              <!-- Header with Gradient -->
               <tr>
-                <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
-                    📋 Resume ผู้สมัครงาน
-                  </h1>
-                </td>
-              </tr>
-              
-              <!-- Content -->
-              <tr>
-                <td style="padding: 40px 30px;">
-                  <p style="margin: 0 0 20px 0; font-size: 16px; color: #374151; line-height: 1.6;">
-                    เรียน <strong style="color: #059669;">${emailData.toName}</strong> (${emailData.department})
-                  </p>
-                  
-                  <p style="margin: 0 0 30px 0; font-size: 15px; color: #374151; line-height: 1.8;">
-                    ฝ่าย <strong style="color: #059669;">${senderRole}</strong> ขอส่งโปรไฟล์ผู้สมัครที่ผ่านการ Pre-Screen เบื้องต้นสำหรับตำแหน่ง 
-                    <strong style="color: #059669;">${emailData.positions}</strong> 
-                    เพื่อให้ท่านพิจารณาคัดเลือกผู้สมัครที่สนใจสัมภาษณ์ เพื่อไม่ให้เป็นการเสียเวลา กรุณาส่ง Resume ที่ต้องการนัดสัมภาษณ์กลับมาภายใน 24 ชั่วโมง
-                  </p>
-                  
-                  <!-- Candidates Table -->
-                  <h2 style="margin: 0 0 24px 0; font-size: 20px; color: #111827; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 24px;">📋</span> รายชื่อผู้สมัคร
-                  </h2>
-                  
-                  <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; border: 3px solid #10b981; border-radius: 12px; overflow: hidden; margin-bottom: 30px; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);">
-                    <thead>
-                      <tr style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                        <th style="padding: 18px 12px; color: #ffffff; font-weight: 700; text-align: center; width: 70px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">ลำดับ</th>
-                        <th style="padding: 18px 12px; color: #ffffff; font-weight: 700; text-align: left; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">ชื่อผู้สมัคร</th>
-                        <th style="padding: 18px 12px; color: #ffffff; font-weight: 700; text-align: left; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">ตำแหน่งที่สมัคร</th>
-                        <th style="padding: 18px 12px; color: #ffffff; font-weight: 700; text-align: center; width: 130px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">AI Score</th>
-                        <th style="padding: 18px 12px; color: #ffffff; font-weight: 700; text-align: left; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 200px;">Comment Pre-Screen จาก HR/IS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${candidatesTableRows}
-                    </tbody>
-                  </table>
-                  
-                  ${candidatesWithResume > 0 ? 
-                    `<p style="margin: 0 0 30px 0; padding: 16px; background-color: #f0fdf4; border-left: 4px solid #10b981; border-radius: 6px; font-size: 14px; color: #065f46;">
-                      📎 แนบไฟล์ Resume จำนวน ${candidatesWithResume} ไฟล์
-                    </p>` 
-                    : '<p style="margin: 0 0 30px 0; padding: 16px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px; font-size: 14px; color: #92400e;">⚠️ ไม่มีไฟล์ Resume แนบ</p>'
-                  }
-                  
-                  <!-- Action Button -->
-                  <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                <td style="background: ${headerGradient}; padding: 40px 30px; text-align: center;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
                     <tr>
                       <td align="center">
-                        <a href="https://core-fit.lovable.app" 
-                           style="display: inline-flex; align-items: center; padding: 16px 30px 16px 30px; background: linear-gradient(135deg, #f0f0ff 0%, #ffffff 100%); color: #7c3aed; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 18px; border: 3px solid #10b981; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2); transition: transform 0.2s; gap: 15px;">
-                          <span style="flex: 1;">แจ้งผลการพิจารณา</span>
-                          <span style="display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; background: #10b981; border-radius: 50%; box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);">
-                            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M20 6L9 17L4 12" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                          </span>
-                        </a>
+                        <div style="width: 64px; height: 64px; background: rgba(255,255,255,0.2); border-radius: 16px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                          <img src="${isFinalInterview ? 'https://img.icons8.com/fluency/48/000000/prize.png' : 'https://img.icons8.com/fluency/48/000000/resume.png'}" alt="${isFinalInterview ? 'Final Interview' : 'Resume'}" style="width: 40px; height: 40px;" />
+                        </div>
+                        <h1 style="margin: 0 0 8px 0; color: #ffffff; font-size: 26px; font-weight: 700; letter-spacing: -0.5px;">
+                          ${headerTitle}
+                        </h1>
+                        <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 15px;">
+                          ${headerSubtitle}
+                        </p>
                       </td>
                     </tr>
                   </table>
-                  
-                  <p style="margin: 30px 0 0 0; font-size: 15px; color: #374151; line-height: 1.6;">
-                    ขอบคุณค่ะ
+                </td>
+              </tr>
+
+              <!-- Greeting Section -->
+              <tr>
+                <td style="padding: 32px 30px 24px;">
+                  <p style="margin: 0 0 16px 0; font-size: 16px; color: #374151; line-height: 1.6;">
+                    สวัสดีค่ะ <strong style="color: ${primaryColor};">${emailData.toName}</strong>
+                  </p>
+                  <p style="margin: 0; font-size: 15px; color: #6b7280; line-height: 1.7;">
+                    ${greetingMessage}
                   </p>
                 </td>
               </tr>
-              
+
+              <!-- Stats Bar -->
+              <tr>
+                <td style="padding: 0 30px;">
+                  <table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; overflow: hidden;">
+                    <tr>
+                      <td width="50%" style="padding: 20px; text-align: center; border-right: 1px solid #e2e8f0;">
+                        <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: ${primaryColor};">${candidateCount}</p>
+                        <p style="margin: 0; font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${isFinalInterview ? 'ผู้สมัคร' : 'ผู้สมัครทั้งหมด'}</p>
+                      </td>
+                      <td width="50%" style="padding: 20px; text-align: center;">
+                        <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: #10b981;">${isFinalInterview ? emailData.candidates[0]?.ai_score || 0 : candidatesWithResume}</p>
+                        <p style="margin: 0; font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${isFinalInterview ? 'คะแนน First Interview' : 'Resume แนบ'}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Candidates Section -->
+              <tr>
+                <td style="padding: 24px 22px 16px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="padding-bottom: 16px;">
+                        <p style="margin: 0; font-size: 13px; font-weight: 600; color: #6366f1; text-transform: uppercase; letter-spacing: 1px;">
+                          รายชื่อผู้สมัคร
+                        </p>
+                      </td>
+                    </tr>
+                    ${candidateCards}
+                  </table>
+                </td>
+              </tr>
+
+              <!-- CTA Button -->
+              <tr>
+                <td style="padding: 16px 30px 32px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td align="center">
+                        <a href="${portalUrl}"
+                           style="display: inline-block; padding: 16px 48px; background: ${headerGradient}; color: #ffffff; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px ${isFinalInterview ? 'rgba(217, 119, 6, 0.4)' : 'rgba(99, 102, 241, 0.4)'}; letter-spacing: 0.3px;">
+                          ${ctaButtonText}
+                        </a>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="padding-top: 16px;">
+                        <p style="margin: 0; font-size: 13px; color: #9ca3af;">
+                          ลิงก์นี้จะหมดอายุใน 7 วัน
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Divider -->
+              <tr>
+                <td style="padding: 0 30px;">
+                  <div style="height: 1px; background: linear-gradient(90deg, transparent, #e2e8f0, transparent);"></div>
+                </td>
+              </tr>
+
               <!-- Footer -->
               <tr>
-                <td style="background-color: #f9fafb; padding: 20px 30px; border-top: 1px solid #e5e7eb;">
-                  <p style="margin: 0; font-size: 13px; color: #9ca3af; text-align: center;">
-                    ระบบจัดการสรรหาบุคลากร | HR Recruitment System
+                <td style="padding: 24px 30px; text-align: center;">
+                  <p style="margin: 0 0 8px 0; font-size: 13px; color: #9ca3af;">
+                    ส่งจากระบบ <strong style="color: #6366f1;">Core-Fit</strong> HR Recruitment
+                  </p>
+                  <p style="margin: 0; font-size: 12px; color: #d1d5db;">
+                    หากมีข้อสงสัย กรุณาติดต่อฝ่าย HR
+                  </p>
+                </td>
+              </tr>
+
+            </table>
+
+            <!-- Bottom Spacing -->
+            <table width="600" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding: 24px; text-align: center;">
+                  <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                    © 2024 Core-Fit. All rights reserved.
                   </p>
                 </td>
               </tr>
             </table>
+
           </td>
         </tr>
       </table>
@@ -185,9 +280,13 @@ async function sendEmail(accessToken: string, emailData: EmailRequest, senderEma
     </html>
   `;
 
+  const emailSubject = isFinalInterview
+    ? `Final Interview - ผู้สมัครตำแหน่ง ${emailData.positions} ผ่าน First Interview`
+    : `Resume ผู้สมัครตำแหน่ง ${emailData.positions} - รอพิจารณา`;
+
   const message: any = {
     message: {
-      subject: `Resume ผู้สมัครตำแหน่ง ${emailData.positions} - รอพิจารณา`,
+      subject: emailSubject,
       body: {
         contentType: 'HTML',
         content: emailBody,

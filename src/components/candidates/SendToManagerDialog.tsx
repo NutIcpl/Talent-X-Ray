@@ -7,33 +7,34 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useProfiles } from "@/hooks/useProfiles";
 import { useToast } from "@/hooks/use-toast";
 import { addSparkleEffect } from "@/lib/sparkle";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { Loader2, Copy, Check, Link, Mail, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface SendToManagerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  candidates: Array<{ 
-    id: string; 
-    name: string; 
-    position: string; 
+  candidates: Array<{
+    id: string;
+    name: string;
+    position: string;
     resumeFile?: string;
     score?: number | null;
     preScreenComment?: string | null;
   }>;
   onSent: () => void;
+}
+
+// Generate a secure random token
+function generateToken(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export function SendToManagerDialog({
@@ -42,40 +43,50 @@ export function SendToManagerDialog({
   candidates,
   onSent,
 }: SendToManagerDialogProps) {
-  const [selectedManagerId, setSelectedManagerId] = useState<string>("");
+  const [managerName, setManagerName] = useState("");
+  const [managerEmail, setManagerEmail] = useState("");
+  const [managerDepartment, setManagerDepartment] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const { profiles, isLoading } = useProfiles();
+  const [generatedUrl, setGeneratedUrl] = useState<string>("");
+  const [copied, setCopied] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-
-  // Get current user's role
-  const currentUserProfile = profiles.find((p) => p.id === user?.id);
-  const senderRole = currentUserProfile?.roles.includes("hr_manager") 
-    ? "HR" 
-    : currentUserProfile?.roles.includes("recruiter")
-    ? "HR"
-    : "IS";
-
-  // Filter only managers
-  const managers = profiles.filter(
-    (profile) =>
-      profile.roles.includes("manager") ||
-      profile.roles.includes("hr_manager") ||
-      profile.roles.includes("ceo")
-  );
-
-  const selectedManager = managers.find((m) => m.id === selectedManagerId);
 
   // Get unique positions from candidates
   const positions = [...new Set(candidates.map((c) => c.position))].join(", ");
 
+  const handleCopyUrl = async () => {
+    await navigator.clipboard.writeText(generatedUrl);
+    setCopied(true);
+    toast({
+      title: "คัดลอก URL แล้ว",
+      description: "URL ถูกคัดลอกไปยังคลิปบอร์ดแล้ว",
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Validate email format
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const handleSend = async (e: React.MouseEvent<HTMLButtonElement>) => {
     addSparkleEffect(e);
 
-    if (!selectedManagerId) {
+    // Validate inputs
+    if (!managerName.trim()) {
       toast({
-        title: "กรุณาเลือก Manager",
-        description: "กรุณาเลือก Manager ที่ต้องการส่ง Resume ไป",
+        title: "กรุณากรอกชื่อ",
+        description: "กรุณากรอกชื่อผู้รับ",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!managerEmail.trim() || !isValidEmail(managerEmail)) {
+      toast({
+        title: "อีเมลไม่ถูกต้อง",
+        description: "กรุณากรอกอีเมลให้ถูกต้อง",
         variant: "destructive",
       });
       return;
@@ -84,14 +95,59 @@ export function SendToManagerDialog({
     setIsSending(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke(
+      // Generate unique token
+      const token = generateToken();
+
+      // Set expiration to 7 days from now
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      // Create invitation record (manager_id is now optional for manual entry)
+      const { data: invitation, error: invitationError } = await supabase
+        .from('manager_invitations')
+        .insert({
+          token,
+          manager_id: user?.id, // Use current user as fallback
+          manager_email: managerEmail.trim(),
+          manager_name: managerName.trim(),
+          sent_by: user?.id,
+          expires_at: expiresAt.toISOString(),
+          status: 'pending',
+        })
+        .select()
+        .single();
+
+      if (invitationError) throw invitationError;
+
+      // Create invitation candidates records
+      const candidateRecords = candidates.map(c => ({
+        invitation_id: invitation.id,
+        candidate_id: c.id,
+        position: c.position,
+        ai_score: c.score || 0,
+        pre_screen_comment: c.preScreenComment || null,
+        manager_response: 'pending',
+      }));
+
+      const { error: candidatesError } = await supabase
+        .from('manager_invitation_candidates')
+        .insert(candidateRecords);
+
+      if (candidatesError) throw candidatesError;
+
+      // Generate portal URL
+      const portalUrl = `${window.location.origin}/manager-portal?token=${token}`;
+      setGeneratedUrl(portalUrl);
+
+      // Send email with the portal URL
+      const { error } = await supabase.functions.invoke(
         'send-email-with-attachments',
         {
           body: {
-            to: selectedManager?.email,
-            toName: selectedManager?.name,
-            department: selectedManager?.department || 'แผนก',
-            senderRole,
+            to: managerEmail.trim(),
+            toName: managerName.trim(),
+            department: managerDepartment.trim() || 'แผนก',
+            senderRole: 'HR',
             candidates: candidates.map(c => ({
               id: c.id,
               name: c.name,
@@ -101,25 +157,31 @@ export function SendToManagerDialog({
               pre_screen_comment: c.preScreenComment || '-',
             })),
             positions,
+            portalUrl,
           },
         }
       );
 
-      if (error) throw error;
-
-      toast({
-        title: "ส่งอีเมลสำเร็จ",
-        description: `ส่ง Resume ของผู้สมัคร ${candidates.length} คนไปยัง ${selectedManager?.name} แล้ว`,
-      });
+      if (error) {
+        console.warn('Email sending failed, but invitation was created:', error);
+        toast({
+          title: "สร้าง URL สำเร็จ",
+          description: "URL ถูกสร้างแล้ว แต่ไม่สามารถส่งอีเมลได้ กรุณาคัดลอก URL และส่งเอง",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "ส่งอีเมลสำเร็จ",
+          description: `ส่ง Resume ของผู้สมัคร ${candidates.length} คนไปยัง ${managerName} แล้ว`,
+        });
+      }
 
       onSent();
-      onOpenChange(false);
-      setSelectedManagerId("");
     } catch (error: any) {
-      console.error('Error sending email:', error);
+      console.error('Error sending invitation:', error);
       toast({
         title: "เกิดข้อผิดพลาด",
-        description: error.message || "ไม่สามารถส่งอีเมลได้ กรุณาลองใหม่อีกครั้ง",
+        description: error.message || "ไม่สามารถสร้างคำเชิญได้ กรุณาลองใหม่อีกครั้ง",
         variant: "destructive",
       });
     } finally {
@@ -127,10 +189,19 @@ export function SendToManagerDialog({
     }
   };
 
+  const handleClose = () => {
+    onOpenChange(false);
+    setManagerName("");
+    setManagerEmail("");
+    setManagerDepartment("");
+    setGeneratedUrl("");
+    setCopied(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             ส่ง Resume ไปยังผู้จัดการ
           </DialogTitle>
@@ -139,115 +210,203 @@ export function SendToManagerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">เลือกผู้จัดการ</label>
-            <Select value={selectedManagerId} onValueChange={setSelectedManagerId}>
-              <SelectTrigger className="border-border/50 focus:border-primary focus:shadow-accent transition-all">
-                <SelectValue placeholder="เลือกผู้จัดการ..." />
-              </SelectTrigger>
-              <SelectContent>
-                {isLoading ? (
-                  <SelectItem value="loading" disabled>
-                    กำลังโหลด...
-                  </SelectItem>
-                ) : managers.length === 0 ? (
-                  <SelectItem value="empty" disabled>
-                    ไม่พบผู้จัดการ
-                  </SelectItem>
-                ) : (
-                  managers.map((manager) => (
-                    <SelectItem key={manager.id} value={manager.id}>
-                      {manager.name} - {manager.department || "ไม่ระบุแผนก"}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-6 py-4 overflow-y-auto flex-1">
+          {/* Manual Input Fields */}
+          {!generatedUrl && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="managerName" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  ชื่อผู้รับ <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="managerName"
+                  placeholder="เช่น คุณสมชาย ใจดี"
+                  value={managerName}
+                  onChange={(e) => setManagerName(e.target.value)}
+                  className="border-border/50 focus:border-primary"
+                />
+              </div>
 
-          {selectedManager && (
+              <div className="space-y-2">
+                <Label htmlFor="managerEmail" className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  อีเมล <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="managerEmail"
+                  type="email"
+                  placeholder="example@company.com"
+                  value={managerEmail}
+                  onChange={(e) => setManagerEmail(e.target.value)}
+                  className="border-border/50 focus:border-primary"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="managerDepartment">แผนก (ไม่บังคับ)</Label>
+                <Input
+                  id="managerDepartment"
+                  placeholder="เช่น ฝ่ายขาย, IT, บัญชี"
+                  value={managerDepartment}
+                  onChange={(e) => setManagerDepartment(e.target.value)}
+                  className="border-border/50 focus:border-primary"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Generated URL Display */}
+          {generatedUrl && (
+            <div className="space-y-2 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2 text-green-700">
+                <Link className="h-4 w-4" />
+                <span className="text-sm font-medium">URL สำหรับผู้จัดการ (หมดอายุใน 7 วัน)</span>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={generatedUrl}
+                  readOnly
+                  className="text-xs bg-white"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopyUrl}
+                  className="shrink-0"
+                >
+                  {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-green-600">
+                URL นี้ถูกส่งไปยังอีเมล {managerEmail} แล้ว หรือคุณสามารถคัดลอกและส่งเองได้
+              </p>
+            </div>
+          )}
+
+          {/* Email Preview - Modern Card Design */}
+          {managerName && managerEmail && !generatedUrl && (
             <div className="space-y-3">
               <label className="text-sm font-medium">ตัวอย่างอีเมล</label>
-              <div className="border rounded-lg p-4 bg-secondary/10 space-y-4 text-sm">
-                <p className="font-medium">
-                  เรียน {selectedManager.name} ({selectedManager.department || "แผนก"})
-                </p>
-                <div className="text-muted-foreground leading-relaxed">
-                  <p>
-                    ฝ่าย <span className="font-semibold text-primary">{senderRole}</span> ขอส่งโปรไฟล์ผู้สมัครที่ผ่านการ Pre-Screen เบื้องต้นสำหรับตำแหน่ง{" "}
-                    <span className="font-semibold text-foreground">{positions}</span>{" "}
-                    เพื่อให้ท่านพิจารณาคัดเลือกผู้สมัครที่สนใจสัมภาษณ์ เพื่อไม่ให้เป็นการเสียเวลา กรุณาส่ง Resume ที่ต้องการนัดสัมภาษณ์กลับมาภายใน 24 ชั่วโมง
+              <div className="border rounded-xl overflow-hidden shadow-sm">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-violet-500 p-4 text-center">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl mx-auto mb-2 flex items-center justify-center">
+                    <Mail className="h-6 w-6 text-white" />
+                  </div>
+                  <h3 className="text-white font-semibold text-base">ผู้สมัครรอพิจารณา</h3>
+                  <p className="text-white/80 text-xs mt-1">
+                    {candidates.length} คน | ตำแหน่ง {positions}
                   </p>
                 </div>
-                
-                {/* Preview Table */}
-                <div className="pt-3 border-t overflow-x-auto">
-                  <table className="w-full text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-primary/10">
-                        <th className="border border-border/50 px-2 py-1.5 text-center w-12">ลำดับ</th>
-                        <th className="border border-border/50 px-2 py-1.5 text-left">ชื่อผู้สมัคร</th>
-                        <th className="border border-border/50 px-2 py-1.5 text-left">ตำแหน่งที่สมัคร</th>
-                        <th className="border border-border/50 px-2 py-1.5 text-center w-20">AI Score</th>
-                        <th className="border border-border/50 px-2 py-1.5 text-left">Comment Pre-Screen</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {candidates.slice(0, 5).map((candidate, index) => (
-                        <tr key={candidate.id} className={index % 2 === 0 ? "bg-background" : "bg-muted/30"}>
-                          <td className="border border-border/50 px-2 py-1.5 text-center font-medium">{index + 1}</td>
-                          <td className="border border-border/50 px-2 py-1.5">{candidate.name}</td>
-                          <td className="border border-border/50 px-2 py-1.5">{candidate.position || 'ไม่ระบุ'}</td>
-                          <td className="border border-border/50 px-2 py-1.5 text-center">
-                            <span className="inline-block px-2 py-0.5 bg-primary/20 text-primary rounded-full font-medium">
-                              {candidate.score ?? 0}%
-                            </span>
-                          </td>
-                          <td className="border border-border/50 px-2 py-1.5 text-muted-foreground">
-                            {candidate.preScreenComment || '-'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {candidates.length > 5 && (
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
-                      และอีก {candidates.length - 5} คน...
+
+                {/* Content */}
+                <div className="bg-white p-4 space-y-4">
+                  {/* Greeting */}
+                  <div>
+                    <p className="text-sm text-gray-700">
+                      สวัสดีค่ะ <span className="font-semibold text-indigo-600">{managerName}</span>
                     </p>
-                  )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      ฝ่าย <span className="font-medium text-indigo-600">HR</span> ขอส่งรายชื่อผู้สมัครที่ผ่านการ Pre-Screen เบื้องต้น
+                    </p>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 gap-2 bg-slate-50 rounded-lg p-3">
+                    <div className="text-center">
+                      <p className="text-xl font-bold text-indigo-600">{candidates.length}</p>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wide">ผู้สมัครทั้งหมด</p>
+                    </div>
+                    <div className="text-center border-l border-slate-200">
+                      <p className="text-xl font-bold text-emerald-500">
+                        {candidates.filter(c => c.resumeFile).length}
+                      </p>
+                      <p className="text-[10px] text-gray-500 uppercase tracking-wide">Resume แนบ</p>
+                    </div>
+                  </div>
+
+                  {/* Candidate Cards */}
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider">รายชื่อผู้สมัคร</p>
+                    {candidates.slice(0, 3).map((candidate) => {
+                      const score = candidate.score ?? 0;
+                      const scoreColor = score >= 80 ? 'text-emerald-500 bg-emerald-50' : score >= 60 ? 'text-amber-500 bg-amber-50' : 'text-red-500 bg-red-50';
+                      return (
+                        <div key={candidate.id} className="border rounded-lg p-3 bg-white">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-semibold text-sm">
+                              {candidate.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-800 truncate">{candidate.name}</p>
+                              <p className="text-xs text-gray-500 truncate">{candidate.position}</p>
+                            </div>
+                            <div className={`px-2.5 py-1 rounded-full text-xs font-bold ${scoreColor}`}>
+                              {score}%
+                            </div>
+                          </div>
+                          {candidate.preScreenComment && (
+                            <div className="mt-2 pl-12">
+                              <div className="text-[10px] bg-slate-50 rounded p-2 border-l-2 border-indigo-400">
+                                <p className="text-[9px] font-semibold text-indigo-600 uppercase mb-0.5">Pre-Screen Comment</p>
+                                <p className="text-gray-600 line-clamp-2">{candidate.preScreenComment}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {candidates.length > 3 && (
+                      <p className="text-xs text-center text-gray-400">
+                        และอีก {candidates.length - 3} คน...
+                      </p>
+                    )}
+                  </div>
+
+                  {/* CTA Button Preview */}
+                  <div className="text-center pt-2">
+                    <div className="inline-block px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-medium rounded-lg shadow-md">
+                      ดูรายละเอียดและนัดสัมภาษณ์
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-2">ลิงก์นี้จะหมดอายุใน 7 วัน</p>
+                  </div>
                 </div>
-                
-                <div className="pt-3 flex justify-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="pointer-events-none"
-                  >
-                    แจ้งผลการพิจารณา
-                  </Button>
+
+                {/* Footer */}
+                <div className="bg-slate-50 px-4 py-2 text-center border-t">
+                  <p className="text-[10px] text-gray-400">
+                    ส่งจากระบบ <span className="font-medium text-indigo-500">Core-Fit</span> HR Recruitment
+                  </p>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0">
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={handleClose}
             disabled={isSending}
           >
-            ยกเลิก
+            {generatedUrl ? "ปิด" : "ยกเลิก"}
           </Button>
-          <Button
-            onClick={handleSend}
-            disabled={!selectedManagerId || isSending}
-            className="gap-2"
-          >
-            {isSending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isSending ? "กำลังส่ง..." : "ส่งอีเมล"}
-          </Button>
+          {!generatedUrl && (
+            <Button
+              onClick={handleSend}
+              disabled={!managerName.trim() || !managerEmail.trim() || isSending}
+              className="gap-2"
+            >
+              {isSending && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isSending ? "กำลังส่ง..." : (
+                <>
+                  <Mail className="h-4 w-4" />
+                  ส่งอีเมล
+                </>
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

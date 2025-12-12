@@ -7,11 +7,12 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Filter, Star, UserPlus, Loader2, Sparkles } from "lucide-react";
+import { Search, Filter, Star, UserPlus, Loader2, Sparkles, GitCompare } from "lucide-react";
 import { CandidateDetailDialog } from "@/components/candidates/CandidateDetailDialog";
 import { CandidateFormDialog } from "@/components/candidates/CandidateFormDialog";
 import { SendToManagerDialog } from "@/components/candidates/SendToManagerDialog";
 import { ManagerCandidateView } from "@/components/candidates/ManagerCandidateView";
+import { CompareCandidatesDialog } from "@/components/candidates/CompareCandidatesDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useCandidatesData, CandidateData } from "@/hooks/useCandidatesData";
@@ -26,9 +27,13 @@ const stageColors: Record<string, string> = {
   Shortlist: "bg-yellow-100 text-yellow-700 border-yellow-200",
   Screening: "bg-orange-100 text-orange-700 border-orange-200",
   Interview: "bg-purple-100 text-purple-700 border-purple-200",
+  First_Interview: "bg-purple-100 text-purple-700 border-purple-200",
+  Final_Interview: "bg-amber-100 text-amber-700 border-amber-200",
   Offer: "bg-green-100 text-green-700 border-green-200",
+  Not_Offer: "bg-red-100 text-red-700 border-red-200",
   Hired: "bg-emerald-100 text-emerald-700 border-emerald-200",
   Rejected: "bg-gray-100 text-gray-700 border-gray-200",
+  Interview_Rejected: "bg-red-100 text-red-700 border-red-200",
 };
 
 const stageLabels: Record<string, string> = {
@@ -37,9 +42,13 @@ const stageLabels: Record<string, string> = {
   Shortlist: "Shortlist",
   Screening: "Screening",
   Interview: "Interview",
+  First_Interview: "First Interview",
+  Final_Interview: "Final Interview",
   Offer: "Offer",
+  Not_Offer: "Not Offer",
   Hired: "Hired",
   Rejected: "Rejected",
+  Interview_Rejected: "ปฏิเสธการสัมภาษณ์",
 };
 
 export default function Candidates() {
@@ -91,6 +100,7 @@ export default function Candidates() {
   const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
   const [isSendToManagerOpen, setIsSendToManagerOpen] = useState(false);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
 
   // Show Manager view if user only has manager role (not admin/hr/recruiter)
   const showManagerView = isManager && !isAdmin && !isHRManager && !isRecruiter;
@@ -124,16 +134,20 @@ export default function Candidates() {
       matchesTab = stage === "Rejected";
     } else if (activeTab === "pre-screen") {
       matchesTab = stage === "Screening";
-    } else if (activeTab === "interview1") {
-      // Interview 1 = Interview stage (first round)
-      matchesTab = stage === "Interview";
-    } else if (activeTab === "interview2") {
-      // Interview 2 = Interview stage (second round) - can be differentiated by interview count if needed
-      matchesTab = stage === "Interview";
+    } else if (activeTab === "first-interview") {
+      // First Interview stage
+      matchesTab = stage === "First_Interview" || stage === "Interview";
+    } else if (activeTab === "final-interview") {
+      // Final Interview stage
+      matchesTab = stage === "Final_Interview";
     } else if (activeTab === "offer") {
       matchesTab = stage === "Offer";
+    } else if (activeTab === "not-offer") {
+      matchesTab = stage === "Not_Offer";
     } else if (activeTab === "hired") {
       matchesTab = stage === "Hired";
+    } else if (activeTab === "interview-rejected") {
+      matchesTab = stage === "Interview_Rejected";
     }
     
     return matchesSearch && matchesPosition && matchesTab;
@@ -410,19 +424,40 @@ export default function Candidates() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full justify-start">
+        <TabsList className="w-full justify-start flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="all">ALL</TabsTrigger>
           <TabsTrigger value="shortlist">Shortlist</TabsTrigger>
           <TabsTrigger value="interested">Interested</TabsTrigger>
           <TabsTrigger value="not-interested">Not Interested</TabsTrigger>
           <TabsTrigger value="pre-screen">Pre Screen</TabsTrigger>
-          <TabsTrigger value="interview1">Interview 1</TabsTrigger>
-          <TabsTrigger value="interview2">Interview 2</TabsTrigger>
+          <TabsTrigger value="first-interview">First Interview</TabsTrigger>
+          <TabsTrigger value="final-interview">Final Interview</TabsTrigger>
+          <TabsTrigger value="interview-rejected">ปฏิเสธการสัมภาษณ์</TabsTrigger>
           <TabsTrigger value="offer">Offer</TabsTrigger>
+          <TabsTrigger value="not-offer">Not Offer</TabsTrigger>
           <TabsTrigger value="hired">Hired</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-6">
+          {/* Compare Button for Offer tab */}
+          {activeTab === "offer" && filteredCandidates.length >= 2 && (
+            <div className="mb-4 p-4 bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/20 rounded-lg flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm">เปรียบเทียบผู้สมัคร</h3>
+                <p className="text-xs text-muted-foreground">
+                  เลือกผู้สมัครที่ต้องการเปรียบเทียบ แล้วให้ AI วิเคราะห์และจัดอันดับ
+                </p>
+              </div>
+              <Button
+                onClick={() => setIsCompareOpen(true)}
+                className="gap-2"
+                variant="default"
+              >
+                <GitCompare className="h-4 w-4" />
+                เปรียบเทียบด้วย AI
+              </Button>
+            </div>
+          )}
           <div className="grid gap-4">
             {filteredCandidates.length === 0 ? (
               <Card>
@@ -522,8 +557,34 @@ export default function Candidates() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
+                        {/* Show Hire/Reject buttons for Offer stage */}
+                        {candidate.stage === "Offer" && (
+                          <>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(candidate.id, 'Hired');
+                              }}
+                            >
+                              Hire
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(candidate.id, 'Not_Offer');
+                              }}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                        <Button
+                          variant="outline"
                           className="hover:bg-accent transition-colors"
                           onClick={() => handleViewDetails(candidate)}
                         >
@@ -615,6 +676,12 @@ export default function Candidates() {
           });
           setSelectedCandidates([]);
         }}
+      />
+
+      <CompareCandidatesDialog
+        open={isCompareOpen}
+        onOpenChange={setIsCompareOpen}
+        candidates={candidates.filter(c => c.stage === "Offer")}
       />
     </div>
   );

@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx supabase:*)",
+      "Bash(cat:*)",
+      "Bash(set SUPABASE_ACCESS_TOKEN=sbp_1dba076783703615c8c0e5936747b2315d3d601e)",
+      "Bash($env:SUPABASE_ACCESS_TOKEN=\"sbp_1dba076783703615c8c0e5936747b2315d3d601e\")",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_1dba076783703615c8c0e5936747b2315d3d601e npx supabase functions deploy:*)",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_1dba076783703615c8c0e5936747b2315d3d601e npx supabase secrets set:*)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(curl:*)",
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_59f31c5d8f9544af88b170dcb43b1ea3a14d201c npx supabase functions deploy:*)"
+    ]
+  }
+}

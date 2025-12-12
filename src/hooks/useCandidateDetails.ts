@@ -59,6 +59,7 @@ export interface CandidateDetails {
   family_members: any[];
   language_skills: any[];
   privacy_consent: boolean | null;
+  application_form_url: string | null;
 }
 
 export function useCandidateDetails(candidateId: string | null) {
@@ -137,12 +138,20 @@ export function useCandidateDetails(candidateId: string | null) {
           });
         if (error) throw error;
       }
+
+      // Update candidate stage to Screening after saving test scores
+      const { error: stageError } = await supabase
+        .from("candidates")
+        .update({ stage: "Screening" })
+        .eq("id", candidateId);
+      if (stageError) throw stageError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["candidate-details", candidateId] });
+      queryClient.invalidateQueries({ queryKey: ["candidates-data"] });
       toast({
         title: "บันทึกสำเร็จ",
-        description: "บันทึกคะแนนทดสอบเรียบร้อยแล้ว",
+        description: "บันทึกคะแนนทดสอบและเปลี่ยนสถานะเป็น Pre-Screen เรียบร้อยแล้ว",
       });
     },
     onError: (error: any) => {
@@ -179,13 +188,27 @@ export function useCandidateDetails(candidateId: string | null) {
         }
       }
 
-      // Check if pre-screen interview exists
-      const { data: existing } = await supabase
+      // Check if pre-screen interview exists (search in notes for type: pre_screen)
+      const { data: interviews } = await supabase
         .from("interviews")
-        .select("id")
-        .eq("application_id", applicationId)
-        .eq("status", "pre_screen")
-        .maybeSingle();
+        .select("id, notes")
+        .eq("application_id", applicationId);
+
+      // Find existing pre-screen interview
+      const existing = interviews?.find(i => {
+        if (!i.notes) return false;
+        try {
+          const notesData = JSON.parse(i.notes);
+          return notesData.type === 'pre_screen';
+        } catch {
+          return false;
+        }
+      });
+
+      const notesJson = JSON.stringify({
+        type: 'pre_screen',
+        feedback,
+      });
 
       if (existing) {
         const { error } = await supabase
@@ -193,7 +216,8 @@ export function useCandidateDetails(candidateId: string | null) {
           .update({
             scheduled_at: scheduledAt,
             result: passed ? "passed" : "failed",
-            notes: feedback,
+            notes: notesJson,
+            status: "completed",
           })
           .eq("id", existing.id);
         if (error) throw error;
@@ -202,10 +226,10 @@ export function useCandidateDetails(candidateId: string | null) {
           .from("interviews")
           .insert({
             application_id: applicationId,
-            status: "pre_screen",
+            status: "completed",
             scheduled_at: scheduledAt,
             result: passed ? "passed" : "failed",
-            notes: feedback,
+            notes: notesJson,
           });
         if (error) throw error;
       }
@@ -214,6 +238,7 @@ export function useCandidateDetails(candidateId: string | null) {
       queryClient.invalidateQueries({ queryKey: ["candidate-details", candidateId] });
       queryClient.invalidateQueries({ queryKey: ["candidates-data"] });
       queryClient.invalidateQueries({ queryKey: ["interviews"] });
+      queryClient.invalidateQueries({ queryKey: ["pre-screen-interview", candidateId] });
       toast({
         title: "บันทึกสำเร็จ",
         description: "บันทึกผล Pre-Screen เรียบร้อยแล้ว",
@@ -415,15 +440,27 @@ export function useCandidateDetails(candidateId: string | null) {
 
       if (!application) return null;
 
-      const { data, error } = await supabase
+      // Get all interviews for this application and filter for pre_screen
+      const { data: interviews, error } = await supabase
         .from("interviews")
         .select("*")
-        .eq("application_id", application.id)
-        .eq("status", "pre_screen")
-        .maybeSingle();
+        .eq("application_id", application.id);
 
-      if (error) throw error;
-      return data;
+      if (error && error.code !== 'PGRST116') throw error;
+      if (!interviews || interviews.length === 0) return null;
+
+      // Find pre-screen interview by checking notes for type
+      const preScreenInterview = interviews.find(i => {
+        if (!i.notes) return false;
+        try {
+          const notes = JSON.parse(i.notes);
+          return notes.type === 'pre_screen';
+        } catch {
+          return false;
+        }
+      });
+
+      return preScreenInterview || null;
     },
     enabled: !!candidateId,
   });
@@ -442,15 +479,30 @@ export function useCandidateDetails(candidateId: string | null) {
 
       if (!application) return null;
 
-      const { data, error } = await supabase
+      // Get all interviews for this application and filter for first interview
+      const { data: interviews, error } = await supabase
         .from("interviews")
         .select("*")
-        .eq("application_id", application.id)
-        .filter("notes", "cs", '{"type":"first_interview"}')
-        .maybeSingle();
+        .eq("application_id", application.id);
 
       if (error && error.code !== 'PGRST116') throw error;
-      return data;
+      if (!interviews || interviews.length === 0) return null;
+
+      // Find first interview by checking notes for type or source
+      const firstInterview = interviews.find(i => {
+        if (!i.notes) return false;
+        try {
+          const notes = JSON.parse(i.notes);
+          // Match first_interview by type or manager_portal source
+          return notes.type === 'first_interview' ||
+                 notes.source === 'manager_portal' ||
+                 notes.source === 'manager_portal_passed';
+        } catch {
+          return false;
+        }
+      });
+
+      return firstInterview || null;
     },
     enabled: !!candidateId,
   });
@@ -469,15 +521,30 @@ export function useCandidateDetails(candidateId: string | null) {
 
       if (!application) return null;
 
-      const { data, error } = await supabase
+      // Get all interviews for this application and filter for final interview
+      const { data: interviews, error } = await supabase
         .from("interviews")
         .select("*")
-        .eq("application_id", application.id)
-        .filter("notes", "cs", '{"type":"final_interview"}')
-        .maybeSingle();
+        .eq("application_id", application.id);
 
       if (error && error.code !== 'PGRST116') throw error;
-      return data;
+      if (!interviews || interviews.length === 0) return null;
+
+      // Find final interview by checking notes for type or source
+      const finalInterview = interviews.find(i => {
+        if (!i.notes) return false;
+        try {
+          const notes = JSON.parse(i.notes);
+          // Match final_interview by type or sent_from_first_interview source
+          return notes.type === 'final_interview' ||
+                 notes.source === 'sent_from_first_interview' ||
+                 notes.source === 'manager_portal_final';
+        } catch {
+          return false;
+        }
+      });
+
+      return finalInterview || null;
     },
     enabled: !!candidateId,
   });
