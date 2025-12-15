@@ -234,11 +234,16 @@ export function useCandidateDetails(candidateId: string | null) {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["candidate-details", candidateId] });
-      queryClient.invalidateQueries({ queryKey: ["candidates-data"] });
-      queryClient.invalidateQueries({ queryKey: ["interviews"] });
-      queryClient.invalidateQueries({ queryKey: ["pre-screen-interview", candidateId] });
+    onSuccess: async () => {
+      // Invalidate and refetch all related queries
+      await queryClient.invalidateQueries({ queryKey: ["candidate-details", candidateId] });
+      await queryClient.invalidateQueries({ queryKey: ["candidates-data"] });
+      await queryClient.invalidateQueries({ queryKey: ["interviews"] });
+      await queryClient.invalidateQueries({ queryKey: ["pre-screen-interview", candidateId] });
+
+      // Force refetch to ensure data is updated
+      await queryClient.refetchQueries({ queryKey: ["pre-screen-interview", candidateId] });
+
       toast({
         title: "บันทึกสำเร็จ",
         description: "บันทึกผล Pre-Screen เรียบร้อยแล้ว",

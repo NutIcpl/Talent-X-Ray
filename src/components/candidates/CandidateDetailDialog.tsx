@@ -344,8 +344,34 @@ export function CandidateDetailDialog({ candidate, open, onOpenChange, onEdit, o
   };
 
   const handleSingleInterviewSave = async (interviewData: { date: string; passed: boolean; feedback: string }) => {
+    console.log('handleSingleInterviewSave called:', { activeInterview, applicationId: candidate.application_id, interviewData });
+
     // Save to database if it's HR/Pre-screen interview
-    if (activeInterview === 'hr' && candidate.application_id) {
+    if (activeInterview === 'hr') {
+      if (!candidate.application_id) {
+        console.error('No application_id found for candidate:', candidate.id);
+        toast({
+          title: "เกิดข้อผิดพลาด",
+          description: "ไม่พบ application_id สำหรับผู้สมัครนี้",
+          variant: "destructive",
+        });
+        // Still update local state even without database save
+        const updatedInterviews = {
+          ...candidate.interviews,
+          [activeInterview as string]: interviewData,
+        };
+        onInterviewUpdate(candidate.id, updatedInterviews);
+        setActiveInterview(null);
+        return;
+      }
+
+      console.log('Calling updatePreScreen with:', {
+        applicationId: candidate.application_id,
+        date: interviewData.date,
+        passed: interviewData.passed,
+        feedback: interviewData.feedback,
+      });
+
       updatePreScreen({
         applicationId: candidate.application_id,
         date: interviewData.date,

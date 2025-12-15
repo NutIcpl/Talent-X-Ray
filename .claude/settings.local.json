@@ -12,7 +12,12 @@
       "Bash(npm install:*)",
       "Bash(node:*)",
       "Bash(curl:*)",
-      "Bash(SUPABASE_ACCESS_TOKEN=sbp_59f31c5d8f9544af88b170dcb43b1ea3a14d201c npx supabase functions deploy:*)"
+      "Bash(SUPABASE_ACCESS_TOKEN=sbp_59f31c5d8f9544af88b170dcb43b1ea3a14d201c npx supabase functions deploy:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx vercel:*)",
+      "Bash(cd:*)",
+      "Bash(git add:*)"
     ]
   }
 }
